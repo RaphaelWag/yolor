@@ -92,7 +92,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # Freeze
     freeze = []  # parameter names to freeze (full or partial)
     for k, v in model.named_parameters():
-        v.requires_grad = True  # train all layers
+        module = int(k.split('.')[1])
+        v.requires_grad = module > opt.freeze
         if any(x in k for x in freeze):
             print('freezing %s' % k)
             v.requires_grad = False
@@ -216,7 +217,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # Process 0
     if rank in [-1, 0]:
         ema.updates = start_epoch * nb // accumulate  # set EMA updates
-        testloader = create_dataloader(test_path, imgsz_test, batch_size*2, gs, opt,
+        testloader = create_dataloader(test_path, imgsz_test, batch_size * 2, gs, opt,
                                        hyp=hyp, cache=opt.cache_images and not opt.notest, rect=True,
                                        rank=-1, world_size=opt.world_size, workers=opt.workers)[0]  # testloader
 
@@ -233,7 +234,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     wandb.log({"Labels": [wandb.Image(str(x), caption=x.name) for x in save_dir.glob('*labels*.png')]})
 
             # Anchors
-            #if not opt.noautoanchor:
+            # if not opt.noautoanchor:
             #    check_anchors(dataset, model=model, thr=hyp['anchor_t'], imgsz=imgsz)
 
     # Model parameters
@@ -246,6 +247,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     # Start training
     t0 = time.time()
+    time_elapsed = []
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
     # nw = min(nw, (epochs - start_epoch) / 2 * nb)  # limit warmup to < 1/2 of training
     maps = np.zeros(nc)  # mAP per class
@@ -284,6 +286,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
+        e_t0 = time.time()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
@@ -345,6 +348,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
+        e_t1 = time.time()
+        time_elapsed.append(e_t1 - e_t0)
 
         # Scheduler
         lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
@@ -359,14 +364,16 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
                     results, maps, times = test.test(opt.data,
-                                                 batch_size=batch_size*2,
-                                                 imgsz=imgsz_test,
-                                                 model=ema.ema,
-                                                 single_cls=opt.single_cls,
-                                                 dataloader=testloader,
-                                                 save_dir=save_dir,
-                                                 plots=plots and final_epoch,
-                                                 log_imgs=opt.log_imgs if wandb else 0)
+                                                     batch_size=batch_size * 2,
+                                                     imgsz=imgsz_test,
+                                                     model=ema.ema,
+                                                     single_cls=opt.single_cls,
+                                                     dataloader=testloader,
+                                                     save_dir=save_dir,
+                                                     plots=plots and final_epoch,
+                                                     log_imgs=opt.log_imgs if wandb else 0,
+                                                     verbose=opt.verbose,
+                                                     epoch=epoch)
 
             # Write
             with open(results_file, 'a') as f:
@@ -389,7 +396,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             fi_p = fitness_p(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             fi_r = fitness_r(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
-            fi_ap50 = fitness_ap50(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
+            fi_ap50 = fitness_ap50(
+                np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             fi_ap = fitness_ap(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             if (fi_p > 0.0) or (fi_r > 0.0):
                 fi_f = fitness_f(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
@@ -444,12 +452,12 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     torch.save(ckpt, wdir / 'best_f.pt')
                 if epoch == 0:
                     torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                if ((epoch+1) % 25) == 0:
+                if ((epoch + 1) % opt.save_int) == 0:
                     torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                if epoch >= (epochs-5):
-                    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                elif epoch >= 420:
-                    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
+                #if epoch >= (epochs - 5):
+                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
+                #elif epoch >= 420:
+                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
@@ -476,6 +484,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
+    time_elapsed.pop(0)
+    print('average epoch time train', np.average(time_elapsed))
     return results
 
 
@@ -508,6 +518,10 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/train', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--save_int', type=int, default=1000,
+                        help='intervall for saving weights additional to last and best')
+    parser.add_argument('--freeze', type=int, default=-1, help='# modules to freeze during training')
+    parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
     opt = parser.parse_args()
 
     # Set DDP variables

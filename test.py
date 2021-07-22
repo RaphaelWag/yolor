@@ -28,15 +28,18 @@ def test(data,
          save_json=False,
          single_cls=False,
          augment=False,
-         verbose=False,
+         verbose=False,  # saving metrics per class each epoch
          model=None,
          dataloader=None,
          save_dir=Path(''),  # for saving images
          save_txt=False,  # for auto-labelling
          save_conf=False,
          plots=True,
-         log_imgs=0):  # number of logged images
-
+         log_imgs=0,  # number of logged images
+         epoch=0):
+    if verbose:
+        if not os.path.exists(str(Path(save_dir) / 'class_metrics')):
+            os.mkdir(str(Path(save_dir) / 'class_metrics'))
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -231,8 +234,13 @@ def test(data,
 
     # Print results per class
     if verbose and nc > 1 and len(stats):
+        class_results_file = open(str(Path(save_dir) / 'class_metrics') + '/' + str(epoch) + '.txt', 'w+')
         for i, c in enumerate(ap_class):
-            print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
+            # print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
+            class_results_file.write(
+                str(names[c]) + ' ' + str(seen) + ' ' + str(nt[c]) + ' ' + str(p[i]) + ' ' + str(r[i]) + ' ' + str(
+                    ap50[i]) + ' ' + str(ap[i]) + '\n')
+        class_results_file.close()
 
     # Print speeds
     t = tuple(x / seen * 1E3 for x in (t0, t1, t0 + t1)) + (imgsz, imgsz, batch_size)  # tuple
