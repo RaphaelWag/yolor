@@ -247,7 +247,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     # Start training
     t0 = time.time()
-    time_elapsed = []
+    time_train = np.assarray([], dtype=float)
+    time_aug = np.assarray([], dtype=float)
+    time_val = np.assarray([], dtype=float)
+
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
     # nw = min(nw, (epochs - start_epoch) / 2 * nb)  # limit warmup to < 1/2 of training
     maps = np.zeros(nc)  # mAP per class
@@ -259,6 +262,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
+        aug0=time.time()
 
         # Update image weights (optional)
         if opt.image_weights:
@@ -286,7 +290,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
-        e_t0 = time.time()
+        time_aug = np.append(time_aug, time.time() - aug0)
+        train0 = time.time()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
@@ -348,8 +353,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
-        e_t1 = time.time()
-        time_elapsed.append(e_t1 - e_t0)
+        time_train = np.append(time_train, time.time() - train0)
 
         # Scheduler
         lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
@@ -363,7 +367,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
-                    results, maps, times = test.test(opt.data,
+                    results, maps, times, val_time = test.test(opt.data,
                                                      batch_size=batch_size * 2,
                                                      imgsz=imgsz_test,
                                                      model=ema.ema,
@@ -374,7 +378,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                      log_imgs=opt.log_imgs if wandb else 0,
                                                      verbose=opt.verbose,
                                                      epoch=epoch)
-
+                    time_val = np.apped(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
                 f.write(s + '%10.4g' * 7 % results + '\n')  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
@@ -484,8 +488,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
-    time_elapsed.pop(0)
-    print('average epoch time train', np.average(time_elapsed))
+    time_train.pop(0)
+    print('average epoch time train', np.average(time_train[5:50]))
+    print('average epoch time val', np.average(time_val[5:50]))
+    print('average epoch time aug', np.average(time_aug[5:50]))
     return results
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+import time
 from tqdm import tqdm
 
 from models.experimental import attempt_load
@@ -98,6 +99,7 @@ def test(data,
     p, r, f1, mp, mr, map50, map, t0, t1 = 0., 0., 0., 0., 0., 0., 0., 0., 0.
     loss = torch.zeros(3, device=device)
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
+    val0 = time.time()
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         img = img.to(device, non_blocking=True)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -212,7 +214,7 @@ def test(data,
             plot_images(img, targets, paths, f, names)  # labels
             f = save_dir / f'test_batch{batch_i}_pred.jpg'
             plot_images(img, output_to_target(output, width, height), paths, f, names)  # predictions
-
+    val_time = time.time() - val0
     # Compute statistics
     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
     if len(stats) and stats[0].any():
@@ -279,7 +281,7 @@ def test(data,
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
+    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, val_time
 
 
 if __name__ == '__main__':
