@@ -247,9 +247,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     # Start training
     t0 = time.time()
-    time_train = np.assarray([], dtype=float)
-    time_aug = np.assarray([], dtype=float)
-    time_val = np.assarray([], dtype=float)
+    time_train = np.asarray([], dtype=float)
+    time_aug = np.asarray([], dtype=float)
+    time_val = np.asarray([], dtype=float)
 
     nw = max(round(hyp['warmup_epochs'] * nb), 1000)  # number of warmup iterations, max(3 epochs, 1k iterations)
     # nw = min(nw, (epochs - start_epoch) / 2 * nb)  # limit warmup to < 1/2 of training
