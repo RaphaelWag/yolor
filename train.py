@@ -262,7 +262,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
-        aug0=time.time()
+        aug0 = time.time()
 
         # Update image weights (optional)
         if opt.image_weights:
@@ -368,16 +368,16 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
                     results, maps, times, val_time = test.test(opt.data,
-                                                     batch_size=batch_size * 2,
-                                                     imgsz=imgsz_test,
-                                                     model=ema.ema,
-                                                     single_cls=opt.single_cls,
-                                                     dataloader=testloader,
-                                                     save_dir=save_dir,
-                                                     plots=plots and final_epoch,
-                                                     log_imgs=opt.log_imgs if wandb else 0,
-                                                     verbose=opt.verbose,
-                                                     epoch=epoch)
+                                                               batch_size=batch_size * 2,
+                                                               imgsz=imgsz_test,
+                                                               model=ema.ema,
+                                                               single_cls=opt.single_cls,
+                                                               dataloader=testloader,
+                                                               save_dir=save_dir,
+                                                               plots=plots and final_epoch,
+                                                               log_imgs=opt.log_imgs if wandb else 0,
+                                                               verbose=opt.verbose,
+                                                               epoch=epoch)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
@@ -440,27 +440,27 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 torch.save(ckpt, last)
                 if best_fitness == fi:
                     torch.save(ckpt, best)
-                #if (best_fitness == fi) and (epoch >= (200)):
+                # if (best_fitness == fi) and (epoch >= (200)):
                 #    torch.save(ckpt, wdir / 'best_{:03d}.pt'.format(epoch))
-                #if best_fitness == fi:
+                # if best_fitness == fi:
                 #    torch.save(ckpt, wdir / 'best_overall.pt')
-                #if best_fitness_p == fi_p:
+                # if best_fitness_p == fi_p:
                 #    torch.save(ckpt, wdir / 'best_p.pt')
-                #if best_fitness_r == fi_r:
+                # if best_fitness_r == fi_r:
                 #    torch.save(ckpt, wdir / 'best_r.pt')
-                #if best_fitness_ap50 == fi_ap50:
+                # if best_fitness_ap50 == fi_ap50:
                 #    torch.save(ckpt, wdir / 'best_ap50.pt')
-                #if best_fitness_ap == fi_ap:
+                # if best_fitness_ap == fi_ap:
                 #    torch.save(ckpt, wdir / 'best_ap.pt')
-                #if best_fitness_f == fi_f:
+                # if best_fitness_f == fi_f:
                 #    torch.save(ckpt, wdir / 'best_f.pt')
-                #if epoch == 0:
+                # if epoch == 0:
                 #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                #if ((epoch + 1) % opt.save_int) == 0:
+                # if ((epoch + 1) % opt.save_int) == 0:
                 #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                #if epoch >= (epochs - 5):
+                # if epoch >= (epochs - 5):
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                #elif epoch >= 420:
+                # elif epoch >= 420:
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
@@ -488,7 +488,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
-    time_train.pop(0)
     print('average epoch time train', np.average(time_train[5:50]))
     print('average epoch time val', np.average(time_val[5:50]))
     print('average epoch time aug', np.average(time_aug[5:50]))
