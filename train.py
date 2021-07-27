@@ -378,7 +378,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                      log_imgs=opt.log_imgs if wandb else 0,
                                                      verbose=opt.verbose,
                                                      epoch=epoch)
-                    time_val = np.apped(time_val, val_time)
+                    time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
                 f.write(s + '%10.4g' * 7 % results + '\n')  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
