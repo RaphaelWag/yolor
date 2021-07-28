@@ -37,7 +37,10 @@ def test(data,
          save_conf=False,
          plots=True,
          log_imgs=0,  # number of logged images
-         epoch=0):
+         epoch=0,
+         ap_thresh=None):
+    if ap_thresh is None:
+        ap_thresh = []
     if verbose:
         if not os.path.exists(str(Path(save_dir) / 'class_metrics')):
             os.mkdir(str(Path(save_dir) / 'class_metrics'))
@@ -222,6 +225,8 @@ def test(data,
         p, r, ap50, ap = p[:, 0], r[:, 0], ap[:, 0], ap.mean(1)  # [P, R, AP@0.5, AP@0.5:0.95]
         mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
         nt = np.bincount(stats[3].astype(np.int64), minlength=nc)  # number of targets per class
+        min_ap = min(ap)
+        saving = [min_ap > thresh for thresh in ap_thresh]
     else:
         nt = torch.zeros(1)
 
@@ -281,7 +286,7 @@ def test(data,
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, val_time
+    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, val_time, saving
 
 
 if __name__ == '__main__':
@@ -330,7 +335,7 @@ if __name__ == '__main__':
             y = []  # y axis
             for i in x:  # img-size
                 print('\nRunning %s point %s...' % (f, i))
-                r, _, t = test(opt.data, weights, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json)
+                r, _, t, _, _ = test(opt.data, weights, opt.batch_size, i, opt.conf_thres, opt.iou_thres, opt.save_json)
                 y.append(r + t)  # results and times
             np.savetxt(f, y, fmt='%10.4g')  # save
         os.system('zip -r study.zip study_*.txt')

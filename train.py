@@ -42,6 +42,7 @@ except ImportError:
 
 
 def train(hyp, opt, device, tb_writer=None, wandb=None):
+    saved = [False for _ in len(opt.ap_thresh)]
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
@@ -367,17 +368,17 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
-                    results, maps, times, val_time = test.test(opt.data,
-                                                               batch_size=batch_size * 2,
-                                                               imgsz=imgsz_test,
-                                                               model=ema.ema,
-                                                               single_cls=opt.single_cls,
-                                                               dataloader=testloader,
-                                                               save_dir=save_dir,
-                                                               plots=plots and final_epoch,
-                                                               log_imgs=opt.log_imgs if wandb else 0,
-                                                               verbose=opt.verbose,
-                                                               epoch=epoch)
+                    results, maps, times, val_time, saving = test.test(opt.data,
+                                                                     batch_size=batch_size * 2,
+                                                                     imgsz=imgsz_test,
+                                                                     model=ema.ema,
+                                                                     single_cls=opt.single_cls,
+                                                                     dataloader=testloader,
+                                                                     save_dir=save_dir,
+                                                                     plots=plots and final_epoch,
+                                                                     log_imgs=opt.log_imgs if wandb else 0,
+                                                                     verbose=opt.verbose,
+                                                                     epoch=epoch)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
@@ -462,6 +463,11 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 # elif epoch >= 420:
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
+
+                for k in range(opt.ap_thresh):
+                    if saving[k] and not saved[k]:
+                        saved[k] = True
+                        torch.save(ckpt, best.replace('best', 'thresh_{}_{}'.format(opt.ap_thresh[k], epoch)))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
@@ -524,10 +530,12 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--save_int', type=int, default=1000,
-                        help='intervall for saving weights additional to last and best')
+                        help='interval for saving weights additional to last and best')
     parser.add_argument('--freeze', type=int, default=-1, help='# modules to freeze during training')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
+    parser.add_argument('--ap_thresh', type=str, default='[0.75, 0.80, 0.85, 0.90]', help='ap threshold for saving')
     opt = parser.parse_args()
+    opt.ap_thresh = eval(opt.ap_thresh)
 
     # Set DDP variables
     opt.total_batch_size = opt.batch_size
