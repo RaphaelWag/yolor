@@ -464,7 +464,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 # elif epoch >= 420:
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
 
-                for k in range(opt.ap_thresh):
+                for k in range(len(opt.ap_thresh)):
                     if saving[k] and not saved[k]:
                         saved[k] = True
                         torch.save(ckpt, best.replace('best', 'thresh_{}_{}'.format(opt.ap_thresh[k], epoch)))
