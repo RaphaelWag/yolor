@@ -43,6 +43,7 @@ except ImportError:
 
 def train(hyp, opt, device, tb_writer=None, wandb=None):
     saved = [False for _ in range(len(opt.ap_thresh))]
+    saving = None
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
@@ -463,11 +464,11 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 # elif epoch >= 420:
                 #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-
-                for k in range(len(opt.ap_thresh)):
-                    if saving[k] and not saved[k]:
-                        saved[k] = True
-                        torch.save(ckpt, best.replace('best', 'thresh_{}_{}'.format(opt.ap_thresh[k], epoch)))
+                if saving is not None:
+                    for k in range(len(opt.ap_thresh)):
+                        if saving[k] and not saved[k]:
+                            saved[k] = True
+                            torch.save(ckpt, best.replace('best', 'thresh_{}_{}'.format(opt.ap_thresh[k], epoch)))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
