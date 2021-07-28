@@ -469,7 +469,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     for k in range(len(opt.ap_thresh)):
                         if saving[k] and not saved[k]:
                             saved[k] = True
-                            torch.save(ckpt, wdir / 'thresh_{}_{}'.format(opt.ap_thesh[k], epoch))
+                            torch.save(ckpt, wdir / 'thresh_{}_{}'.format(opt.ap_thresh[k], epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
