@@ -370,16 +370,17 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
                     results, maps, times, val_time, saving = test.test(opt.data,
-                                                                     batch_size=batch_size * 2,
-                                                                     imgsz=imgsz_test,
-                                                                     model=ema.ema,
-                                                                     single_cls=opt.single_cls,
-                                                                     dataloader=testloader,
-                                                                     save_dir=save_dir,
-                                                                     plots=plots and final_epoch,
-                                                                     log_imgs=opt.log_imgs if wandb else 0,
-                                                                     verbose=opt.verbose,
-                                                                     epoch=epoch)
+                                                                       batch_size=batch_size * 2,
+                                                                       imgsz=imgsz_test,
+                                                                       model=ema.ema,
+                                                                       single_cls=opt.single_cls,
+                                                                       dataloader=testloader,
+                                                                       save_dir=save_dir,
+                                                                       plots=plots and final_epoch,
+                                                                       log_imgs=opt.log_imgs if wandb else 0,
+                                                                       verbose=opt.verbose,
+                                                                       epoch=epoch,
+                                                                       ap_thresh=opt.ap_thresh)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
