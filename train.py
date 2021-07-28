@@ -42,7 +42,7 @@ except ImportError:
 
 
 def train(hyp, opt, device, tb_writer=None, wandb=None):
-    saved = [False for _ in len(opt.ap_thresh)]
+    saved = [False for _ in range(len(opt.ap_thresh))]
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
