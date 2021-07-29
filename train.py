@@ -535,7 +535,9 @@ if __name__ == '__main__':
                         help='interval for saving weights additional to last and best')
     parser.add_argument('--freeze', type=int, default=-1, help='# modules to freeze during training')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
-    parser.add_argument('--ap_thresh', type=str, default='[0.75, 0.80, 0.85, 0.90]', help='ap threshold for saving')
+    parser.add_argument('--ap_thresh', type=str,
+                        default='[0.75, 0.775, 0.80, 0.825, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90]',
+                        help='ap threshold for saving')
     opt = parser.parse_args()
     opt.ap_thresh = eval(opt.ap_thresh)
 
