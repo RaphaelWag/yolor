@@ -4,6 +4,7 @@ import math
 import os
 import random
 import time
+from glob import glob
 from pathlib import Path
 from warnings import warn
 
@@ -484,6 +485,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 if str(f2).endswith('.pt'):  # is *.pt
                     strip_optimizer(f2)  # strip optimizer
                     os.system('gsutil cp %s gs://%s/weights' % (f2, opt.bucket)) if opt.bucket else None  # upload
+        for thresh_weights in glob(wdir / 'thresh*.pt'):
+            strip_optimizer(thresh_weights)
         # Finish
         if plots:
             plot_results(save_dir=save_dir)  # save as results.png
