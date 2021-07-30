@@ -485,23 +485,23 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 if str(f2).endswith('.pt'):  # is *.pt
                     strip_optimizer(f2)  # strip optimizer
                     os.system('gsutil cp %s gs://%s/weights' % (f2, opt.bucket)) if opt.bucket else None  # upload
-        for thresh_weights in glob(wdir / 'thresh*.pt'):
+        for thresh_weights in glob(os.path.join(wdir, 'thresh*.pt')):
             strip_optimizer(thresh_weights)
         # Finish
         if plots:
             plot_results(save_dir=save_dir)  # save as results.png
-            if wandb:
-                wandb.log({"Results": [wandb.Image(str(save_dir / x), caption=x) for x in
-                                       ['results.png', 'precision-recall_curve.png']]})
+        if wandb:
+            wandb.log({"Results": [wandb.Image(str(save_dir / x), caption=x) for x in
+                                   ['results.png', 'precision-recall_curve.png']]})
         logger.info('%g epochs completed in %.3f hours.\n' % (epoch - start_epoch + 1, (time.time() - t0) / 3600))
-    else:
+        else:
         dist.destroy_process_group()
 
-    wandb.run.finish() if wandb and wandb.run else None
-    torch.cuda.empty_cache()
-    print('average epoch time train', np.average(time_train[5:50]))
-    print('average epoch time val', np.average(time_val[5:50]))
-    print('average epoch time aug', np.average(time_aug[5:50]))
+        wandb.run.finish() if wandb and wandb.run else None
+        torch.cuda.empty_cache()
+        print('average epoch time train', np.average(time_train[5:50]))
+        print('average epoch time val', np.average(time_val[5:50]))
+        print('average epoch time aug', np.average(time_aug[5:50]))
     return results
 
 
