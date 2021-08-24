@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     # Load PyTorch model
     model = attempt_load(opt.weights, map_location=torch.device('cpu'))  # load FP32 model
-    model.half()
+    #model.half() # NOT SUPPORTED
     labels = model.names
 
     # Checks
