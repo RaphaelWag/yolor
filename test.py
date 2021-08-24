@@ -41,6 +41,7 @@ def test(data,
          ap_thresh=None):
     if ap_thresh is None:
         ap_thresh = []
+    saving = [False for _ in range(len(ap_thresh))]
     if verbose:
         if not os.path.exists(str(Path(save_dir) / 'class_metrics')):
             os.mkdir(str(Path(save_dir) / 'class_metrics'))
