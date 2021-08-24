@@ -25,6 +25,7 @@ if __name__ == '__main__':
 
     # Load PyTorch model
     model = attempt_load(opt.weights, map_location=torch.device('cpu'))  # load FP32 model
+    model.half()
     labels = model.names
 
     # Checks
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     opt.img_size = [check_img_size(x, gs) for x in opt.img_size]  # verify img_size are gs-multiples
 
     # Input
-    img = torch.zeros(opt.batch_size, 3, *opt.img_size)  # image size(1,3,320,192) iDetection
+    img = torch.zeros(opt.batch_size, 3, *opt.img_size, dtype=torch.float16)  # image size(1,3,320,192) iDetection
 
     # Update model
     for k, m in model.named_modules():
@@ -70,6 +71,24 @@ if __name__ == '__main__':
         print('ONNX export success, saved as %s' % f)
     except Exception as e:
         print('ONNX export failure: %s' % e)
+
+    # ONNX export with classes and boxes as outputs
+    try:
+        import onnx
+
+        print('\nStarting ONNX export with onnx %s...' % onnx.__version__)
+        f = opt.weights.replace('.pt', 'alt.onnx')  # filename
+        torch.onnx.export(model, img, f, verbose=False, opset_version=12, input_names=['images'],
+                          output_names=['classes', 'boxes'])
+
+        # Checks
+        onnx_model = onnx.load(f)  # load onnx model
+        onnx.checker.check_model(onnx_model)  # check onnx model
+        # print(onnx.helper.printable_graph(onnx_model.graph))  # print a human readable model
+        print('ONNX export success, saved as %s' % f)
+    except Exception as e:
+        print('ONNX export failure: %s' % e)
+
 
     # CoreML export
     try:
