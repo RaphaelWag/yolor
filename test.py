@@ -42,9 +42,7 @@ def test(data,
     if ap_thresh is None:
         ap_thresh = []
     saving = [False for _ in range(len(ap_thresh))]
-    if verbose:
-        if not os.path.exists(str(Path(save_dir) / 'class_metrics')):
-            os.mkdir(str(Path(save_dir) / 'class_metrics'))
+
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -66,6 +64,10 @@ def test(data,
         # Multi-GPU disabled, incompatible with .half() https://github.com/ultralytics/yolov5/issues/99
         # if device.type != 'cpu' and torch.cuda.device_count() > 1:
         #     model = nn.DataParallel(model)
+
+    if verbose:
+        if not os.path.exists(str(Path(save_dir) / 'class_metrics')):
+            os.mkdir(str(Path(save_dir) / 'class_metrics'))
 
     # Half
     half = device.type != 'cpu'  # half precision only supported on CUDA
