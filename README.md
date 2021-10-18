@@ -39,7 +39,20 @@ New training scheme: train 300 epochs only.
 
 | Model | Test Size | AP<sup>test</sup> | AP<sub>50</sub><sup>test</sup> | AP<sub>75</sub><sup>test</sup> | AP<sub>S</sub><sup>test</sup> | AP<sub>M</sub><sup>test</sup> | AP<sub>L</sub><sup>test</sup> | batch1 throughput |
 | :-- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | 
+| **YOLOR-P6** | 1280 | **53.2%** | **70.8%** | **58.2%** | **35.3%** | **57.3%** | **64.6%** | 49 *fps* |
 | **YOLOR-W6** | 1280 | **54.7%** | **72.2%** | **59.8%** | **36.7%** | **58.7%** | **66.7%** | 47 *fps* |
+| **YOLOR-E6** | 1280 | **55.5%** | **73.1%** | **60.7%** | **37.9%** | **59.2%** | **67.2%** | 37 *fps* |
+| **YOLOR-D6** | 1280 | **56.1%** | **73.8%** | **61.4%** | **38.8%** | **59.9%** | **68.4%** | 30 *fps* |
+|  |  |  |  |  |  |  |
+
+Developing...
+
+| Model | Test Size | AP<sup>test</sup> | AP<sub>50</sub><sup>test</sup> | AP<sub>75</sub><sup>test</sup> | AP<sub>S</sub><sup>test</sup> | AP<sub>M</sub><sup>test</sup> | AP<sub>L</sub><sup>test</sup> | batch1 throughput |
+| :-- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | 
+| **YOLOR-P6** | 1280 | **54.1%** | **71.8%** | **59.3%** | **36.2%** | **58.1%** | **65.8%** | 49 *fps* |
+| **YOLOR-W6** | 1280 | **55.5%** | **73.2%** | **60.6%** | **37.6%** | **59.5%** | **67.7%** | 47 *fps* |
+| **YOLOR-E6** | 1280 | **56.4%** | **74.1%** | **61.6%** | **39.1%** | **60.1%** | **68.2%** | 37 *fps* |
+| **YOLOR-D6** | 1280 | **57.0%** | **74.7%** | **62.2%** | **39.7%** | **60.6%** | **69.0%** | 30 *fps* |
 |  |  |  |  |  |  |  |
 
 ## Installation
