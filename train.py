@@ -267,7 +267,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
-        if opt.freeze_bn:
+        if opt.freeze_bn_buffers:
             for k, v in model.named_modules():
                 if isinstance(v, nn.BatchNorm2d):
                     v.eval()
@@ -541,6 +541,7 @@ if __name__ == '__main__':
                         help='interval for saving weights additional to last and best')
     parser.add_argument('--freeze', type=int, default=-1, help='# modules to freeze during training')
     parser.add_argument('--freeze-bn', action='store_true', help='freeze batch norm layers')
+    parser.add_argument('--freeze-bn-buffers', action='store_true', help='freeze running mean and var')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
     parser.add_argument('--ap_thresh', type=str,
                         default='[0.75, 0.775, 0.80, 0.825, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90]',
