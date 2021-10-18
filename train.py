@@ -111,6 +111,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):
             pg2.append(v.bias)  # biases
         if isinstance(v, nn.BatchNorm2d):
+            if opt.freeze_bn:
+                v.requires_grad = False
             pg0.append(v.weight)  # no decay
         elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
             pg1.append(v.weight)  # apply decay
@@ -265,7 +267,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
-        aug0 = time.time()
+        if opt.freeze_bn:
+            for k, v in model.named_modules():
+                if isinstance(v, nn.BatchNorm2d):
+                    v.eval()
 
         # Update image weights (optional)
         if opt.image_weights:
@@ -293,7 +298,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if rank in [-1, 0]:
             pbar = tqdm(pbar, total=nb)  # progress bar
         optimizer.zero_grad()
-        time_aug = np.append(time_aug, time.time() - aug0)
         train0 = time.time()
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
@@ -501,7 +505,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     torch.cuda.empty_cache()
     print('average epoch time train', np.average(time_train[5:50]))
     print('average epoch time val', np.average(time_val[5:50]))
-    print('average epoch time aug', np.average(time_aug[5:50]))
     return results
 
 
@@ -537,6 +540,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_int', type=int, default=1000,
                         help='interval for saving weights additional to last and best')
     parser.add_argument('--freeze', type=int, default=-1, help='# modules to freeze during training')
+    parser.add_argument('--freeze-bn', action='store_true', help='freeze batch norm layers')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
     parser.add_argument('--ap_thresh', type=str,
                         default='[0.75, 0.775, 0.80, 0.825, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90]',
