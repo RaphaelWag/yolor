@@ -271,6 +271,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             for k, v in model.named_modules():
                 if isinstance(v, nn.BatchNorm2d):
                     v.track_running_stats = False
+                    v.eval()
 
         # Update image weights (optional)
         if opt.image_weights:
