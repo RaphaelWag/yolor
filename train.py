@@ -270,7 +270,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if opt.freeze_bn_buffers:
             for k, v in model.named_modules():
                 if isinstance(v, nn.BatchNorm2d):
-                    v.eval()
+                    v.track_running_stats = False
 
         # Update image weights (optional)
         if opt.image_weights:
