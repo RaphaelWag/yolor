@@ -503,8 +503,10 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
-    print('average epoch time train', np.average(time_train[5:50]))
-    print('average epoch time val', np.average(time_val[5:50]))
+    print('average epoch time train',
+          '{:1.3} +- {:1.3%}'.format(np.average(time_train[5:50]), np.sqrt(np.var(time_train[5:50]))))
+    print('average epoch time val',
+          '{:1.3} +- {:1.3%}'.format(np.average(time_val[5:50]), np.sqrt(np.var(time_val[5:50]))))
     return results
 
 
