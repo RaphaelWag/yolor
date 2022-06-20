@@ -70,7 +70,8 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     # Define criteria
     BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['cls_pw']])).to(device)
     BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['obj_pw']])).to(device)
-    MSEdst = nn.MSELoss().to(device)
+    MSEdst = nn.MSELoss()
+    MSEdst = MSEdst.to(device)
 
     # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
     cp, cn = smooth_BCE(eps=0.0)
@@ -117,6 +118,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Distance Regression
             pdst = ps[..., 5].sigmoid()
+            print(pdst[:10], tdst[i][:10])
             ldst += MSEdst(pdst, tdst[i])
 
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
@@ -127,7 +129,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lcls *= h['cls'] * s
     ldst *= s
     bs = tobj.shape[0]  # batch size
-
+    ldst = ldst.to(device)
     loss = lbox + lobj + lcls + ldst
     return loss * bs, torch.cat((lbox, lobj, lcls, ldst, loss)).detach()
 
@@ -137,7 +139,7 @@ def build_targets(p, targets, model):
     det = model.module.model[-1] if is_parallel(model) else model.model[-1]  # Detect() module
     na, nt = det.na, targets.shape[0]  # number of anchors, targets
     tcls, tbox, indices, anch, tdst = [], [], [], [], []
-    gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
+    gain = torch.ones(8, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
 
@@ -152,7 +154,7 @@ def build_targets(p, targets, model):
         gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain
 
         # Match targets to anchors
-        t = targets * gain  # remove dst from here?
+        t = targets * gain  # dst might need to be adjusted too ?
         if nt:
             # Matches
             r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
@@ -166,7 +168,7 @@ def build_targets(p, targets, model):
             j, k = ((gxy % 1. < g) & (gxy > 1.)).T
             l, m = ((gxi % 1. < g) & (gxi > 1.)).T
             j = torch.stack((torch.ones_like(j), j, k, l, m))
-            t = t.repeat((6, 1, 1))[j]  # change this to 6, 1, 1 from 5, 1, 1?
+            t = t.repeat((5, 1, 1))[j]  # change this to 6, 1, 1 from 5, 1, 1?
             offsets = (torch.zeros_like(gxy)[None] + off[:, None])[j]
         else:
             t = targets[0]
@@ -185,6 +187,6 @@ def build_targets(p, targets, model):
         tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
-        tdst.append(t[:, 6].long())
+        tdst.append(t[:, 6].float() + 0.5)
 
     return tcls, tbox, indices, anch, tdst
