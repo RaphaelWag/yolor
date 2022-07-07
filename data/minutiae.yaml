@@ -1,0 +1,10 @@
+# train and val datasets (image directory or *.txt file with image paths)
+train: /minutiae/annotations/train.txt  
+val: /minutiae/annotations/validation.txt  
+test: None
+
+# number of classes
+nc: 1
+
+# class names
+names: ['0',]

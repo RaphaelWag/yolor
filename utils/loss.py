@@ -118,7 +118,6 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Distance Regression
             pdst = ps[..., 5].sigmoid()
-            print(pdst[:10], tdst[i][:10])
             ldst += MSEdst(pdst, tdst[i])
 
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
@@ -127,7 +126,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lbox *= h['box'] * s
     lobj *= h['obj'] * s * (1.4 if no >= 4 else 1.)
     lcls *= h['cls'] * s
-    ldst *= s
+    ldst *= h['dst_lg'] * s
     bs = tobj.shape[0]  # batch size
     ldst = ldst.to(device)
     loss = lbox + lobj + lcls + ldst

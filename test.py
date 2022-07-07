@@ -101,9 +101,9 @@ def test(data,
     seen = 0
     names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
     coco91class = coco80_to_coco91_class()
-    s = ('%20s' + '%12s' * 6) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95')
-    p, r, f1, mp, mr, map50, map, t0, t1 = 0., 0., 0., 0., 0., 0., 0., 0., 0.
-    loss = torch.zeros(3, device=device)
+    s = ('%20s' + '%12s' * 7) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95', 'dst mse')
+    p, r, f1, mp, mr, map50, map, t0, t1, dstmse = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
+    loss = torch.zeros(4, device=device)
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     val0 = time.time()
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
@@ -123,7 +123,7 @@ def test(data,
 
             # Compute loss
             if training:  # if model has loss hyperparameters
-                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:3]  # box, obj, cls
+                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:4]  # box, obj, cls, dstmse
 
             # Run NMS
             t = time_synchronized()
@@ -193,7 +193,7 @@ def test(data,
                 # Per target class
                 for cls in torch.unique(tcls_tensor):
                     ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
-                    pi = (cls == pred[:, 5]).nonzero(as_tuple=False).view(-1)  # target indices
+                    pi = (cls == pred[:, 6]).nonzero(as_tuple=False).view(-1)  # target indices
 
                     # Search for detections
                     if pi.shape[0]:
@@ -212,7 +212,7 @@ def test(data,
                                     break
 
             # Append statistics (correct, conf, pcls, tcls)
-            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 6].cpu(), tcls))
 
         # Plot images
         if plots and batch_i < 3:
@@ -239,8 +239,8 @@ def test(data,
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
     # Print results
-    pf = '%20s' + '%12.3g' * 6  # print format
-    print(pf % ('all', seen, nt.sum(), mp, mr, map50, map))
+    pf = '%20s' + '%12.3g' * 7  # print format
+    print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, loss[3]/len(dataloader)))
 
     # Print results per class
     if verbose and nc > 1 and len(stats):
