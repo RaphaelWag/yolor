@@ -150,7 +150,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
             image_targets = targets[targets[:, 0] == i]
             boxes = xywh2xyxy(image_targets[:, 2:6]).T
             classes = image_targets[:, 1].astype('int')
-            labels = image_targets.shape[1] == 6  # labels if no conf column
+            labels = image_targets.shape[1] == 7  # labels if no conf column
             conf = None if labels else image_targets[:, 6]  # check for confidence presence (label vs pred)
 
             boxes[[0, 2]] *= w
@@ -163,7 +163,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
                 cls = names[cls] if names else cls
                 if labels or conf[j] > 0.25:  # 0.25 conf thresh
                     label = '%s' % cls if labels else '%s %.1f' % (cls, conf[j])
-                    plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl)
+                    plot_one_box(box, mosaic, color=color, line_thickness=tl)
 
         # Draw image filename labels
         if paths:

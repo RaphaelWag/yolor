@@ -148,9 +148,9 @@ def test(data,
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
                 x = pred.clone()
                 x[:, :4] = scale_coords(img[si].shape[1:], x[:, :4], shapes[si][0], shapes[si][1])  # to original
-                for *xyxy, conf, cls in x:
+                for *xyxy, conf, dst, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                    line = (cls, *xywh, conf, dst) if save_conf else (cls, *xywh, dst)  # label format
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 

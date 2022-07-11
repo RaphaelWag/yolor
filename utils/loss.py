@@ -118,15 +118,18 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Distance Regression
             pdst = ps[..., 5].sigmoid()
-            ldst += MSEdst(pdst, tdst[i])
-
+            if model.training:
+                ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
+            else:
+                ldst += MSEdst(pdst, tdst[i])  # for validation we always want mse as a metric rather than a loss
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
 
     s = 3 / no  # output count scaling
     lbox *= h['box'] * s
     lobj *= h['obj'] * s * (1.4 if no >= 4 else 1.)
     lcls *= h['cls'] * s
-    ldst *= h['dst_lg'] * s
+    if model.training:
+        ldst *= h['dst_lg'] * s
     bs = tobj.shape[0]  # batch size
     ldst = ldst.to(device)
     loss = lbox + lobj + lcls + ldst
