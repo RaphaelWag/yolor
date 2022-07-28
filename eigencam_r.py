@@ -16,14 +16,15 @@ from PIL import Image
 from models.experimental import attempt_load
 from utils.general import check_img_size, non_max_suppression
 
-from glob import glob
-
 COLORS = np.random.uniform(0, 255, size=(80, 3))
 
 parser = argparse.ArgumentParser(prog='eigencam_r.py')
 parser.add_argument('--input', type=str, default='inference/images/IMG_6479.JPG', help='path to input image')
 parser.add_argument('--weights', type=str, required=True, help='path to weights')
 parser.add_argument('--save-path', type=str, default='inference/output/', help='path to save output')
+parser.add_argument('--eigen-smooth', action='store_true', help='grad augmentation for better results')
+parser.add_argument('--aug-smooth', action='store_true',
+                    help='augmentation smoothing for better results, increases runtime x6')
 opt = parser.parse_args()
 
 
@@ -92,7 +93,6 @@ print(target_layers)
 
 cam = EigenCAM(model, target_layers, use_cuda=False)
 
-
 img = np.array(Image.open(opt.input))
 img = cv2.resize(img, (640, 640))
 rgb_img = img.copy()
@@ -101,7 +101,7 @@ tensor = transform(img).unsqueeze(0)
 img = np.float32(img) / 255
 
 # cam on whole image
-grayscale_cam = -np.square(cam(tensor, eigen_smooth=True, aug_smooth=True)[0, :, :])
+grayscale_cam = -np.square(cam(tensor, eigen_smooth=opt.eigen_smooth, aug_smooth=opt.aug_smooth)[0, :, :])
 cam_image = show_cam_on_image(img, grayscale_cam, use_rgb=True)
 Image.fromarray(cam_image).save(os.path.join(opt.save_path, basename))
 
