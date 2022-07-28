@@ -1,7 +1,10 @@
+import os
+
 import warnings
 
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
+import argparse
 import torch
 import cv2
 import numpy as np
@@ -17,12 +20,18 @@ from glob import glob
 
 COLORS = np.random.uniform(0, 255, size=(80, 3))
 
+parser = argparse.ArgumentParser(prog='eigencam_r.py')
+parser.add_argument('--input', type=str, default='inference/images/IMG_6479.JPG', help='path to input image')
+parser.add_argument('--weights', type=str, required=True, help='path to weights')
+parser.add_argument('--save-path', type=str, default='inference/output/', help='path to save output')
+opt = parser.parse_args()
+
 
 def parse_detections(pred):
     boxes, colors, names = [], [], []
     for det in pred:
         for *xyxy, _, cls in det:
-            xyxy =torch.tensor(xyxy).view(1,4)
+            xyxy = torch.tensor(xyxy).view(1, 4)
             xmin = int(xyxy[0, 0])
             ymin = int(xyxy[0, 1])
             xmax = int(xyxy[0, 2])
@@ -65,10 +74,11 @@ def renormalize_cam_in_bounding_boxes(boxes, colors, names, image_float_np, gray
 
 
 transform = transforms.ToTensor()
-weights = 'weights/dd_screws.pt'
+weights = opt.weights
 device = 'cpu'
 imgsz = 640
 half = device != 'cpu'
+basename = os.path.basename(opt.input)
 
 # Load model
 model = attempt_load(weights, map_location=device)  # load FP32 model
@@ -82,24 +92,23 @@ print(target_layers)
 
 cam = EigenCAM(model, target_layers, use_cuda=False)
 
-images = glob('inference/images/I*.JPG')
-for image in images:
-    img = np.array(Image.open(image))
-    img = cv2.resize(img, (640, 640))
-    rgb_img = img.copy()
 
-    tensor = transform(img).unsqueeze(0)
-    img = np.float32(img) / 255
+img = np.array(Image.open(opt.input))
+img = cv2.resize(img, (640, 640))
+rgb_img = img.copy()
 
-    # cam on whole image
-    grayscale_cam = -np.square(cam(tensor, eigen_smooth=True, aug_smooth=True)[0, :, :])
-    cam_image = show_cam_on_image(img, grayscale_cam, use_rgb=True)
-    Image.fromarray(cam_image).save(image.replace('images', 'output'))
+tensor = transform(img).unsqueeze(0)
+img = np.float32(img) / 255
 
-    # cam constrains on bbox
-    pred = model(tensor)
-    pred = non_max_suppression(pred, conf_thres=0.3, iou_thres=0.4)
+# cam on whole image
+grayscale_cam = -np.square(cam(tensor, eigen_smooth=True, aug_smooth=True)[0, :, :])
+cam_image = show_cam_on_image(img, grayscale_cam, use_rgb=True)
+Image.fromarray(cam_image).save(os.path.join(opt.save_path, basename))
 
-    boxes, colors, names = parse_detections(pred)
-    renormalized_cam_image = renormalize_cam_in_bounding_boxes(boxes, colors, names, img, grayscale_cam)
-    Image.fromarray(renormalized_cam_image).save(image.replace('images', 'output').replace('.', '_2.'))
+# cam constrains on bbox
+pred = model(tensor)
+pred = non_max_suppression(pred, conf_thres=0.3, iou_thres=0.4)
+
+boxes, colors, names = parse_detections(pred)
+renormalized_cam_image = renormalize_cam_in_bounding_boxes(boxes, colors, names, img, grayscale_cam)
+Image.fromarray(renormalized_cam_image).save(os.path.join(opt.save_path, basename.replace('.', '_2.')))
