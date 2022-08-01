@@ -121,7 +121,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             if model.training:
                 ldst += MSEdst(pdst, trad[i])  # we can replace this loss function with rmse or anything we like
             else:
-                ldst += MSEdst(pdst, tdst[i])  # for validation we always want mse as a metric rather than a loss
+                ldst += MSEdst(pdst, trad[i])  # for validation we always want mse as a metric rather than a loss
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
 
     s = 3 / no  # output count scaling
