@@ -64,7 +64,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     # print(device)
     lcls, lbox, lobj, ldst = torch.zeros(1, device=device), torch.zeros(1, device=device), \
                              torch.zeros(1, device=device), torch.zeros(1, device=device)
-    tcls, tbox, indices, anchors, tdst = build_targets(p, targets, model)  # targets
+    tcls, tbox, indices, anchors, tdst, trad, tang = build_targets(p, targets, model)  # targets
     h = model.hyp  # hyperparameters
 
     # Define criteria
@@ -117,9 +117,9 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             #     [file.write('%11.5g ' * 4 % tuple(x) + '\n') for x in torch.cat((txy[i], twh[i]), 1)]
 
             # Single Regression
-            pdst = ps[..., 6].sigmoid()
+            pdst = ps[..., 5].sigmoid()
             if model.training:
-                ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
+                ldst += MSEdst(pdst, trad[i])  # we can replace this loss function with rmse or anything we like
             else:
                 ldst += MSEdst(pdst, tdst[i])  # for validation we always want mse as a metric rather than a loss
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
@@ -140,7 +140,7 @@ def build_targets(p, targets, model):
     # Build targets for compute_loss(), input targets(image,class,x,y,w,h,dst)
     det = model.module.model[-1] if is_parallel(model) else model.model[-1]  # Detect() module
     na, nt = det.na, targets.shape[0]  # number of anchors, targets
-    tcls, tbox, indices, anch, tdst = [], [], [], [], []
+    tcls, tbox, indices, anch, tdst, trad, tang = [], [], [], [], [], [], []
     gain = torch.ones(10, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
@@ -189,6 +189,8 @@ def build_targets(p, targets, model):
         tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
-        tdst.append(t[:, 6].float() + 0.5)
+        tdst.append(t[:, 6].float() + 0.5) # distance
+        trad.append(t[:, 7].float()) # radius
+        tang.append(t[:, 8].float()) # angle
 
-    return tcls, tbox, indices, anch, tdst
+    return tcls, tbox, indices, anch, tdst, trad, tang
