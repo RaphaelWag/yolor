@@ -116,8 +116,8 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             # with open('targets.txt', 'a') as file:
             #     [file.write('%11.5g ' * 4 % tuple(x) + '\n') for x in torch.cat((txy[i], twh[i]), 1)]
 
-            # Distance Regression
-            pdst = ps[..., 5].sigmoid()
+            # Single Regression
+            pdst = ps[..., 6].sigmoid()
             if model.training:
                 ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
             else:
