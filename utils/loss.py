@@ -190,7 +190,7 @@ def build_targets(p, targets, model):
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
         tdst.append(t[:, 6].float() + 0.5) # distance
-        trad.append(t[:, 7].float()) # radius
+        trad.append(t[:, 7].float() / 2 + 0.5) # radius
         tang.append(t[:, 8].float()) # angle
 
     return tcls, tbox, indices, anch, tdst, trad, tang
