@@ -8,6 +8,7 @@ import argparse
 import torch
 import cv2
 import numpy as np
+import torch.nn as nn
 import torchvision.transforms as transforms
 from pytorch_grad_cam import EigenCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image, scale_cam_image
@@ -15,6 +16,15 @@ from PIL import Image
 
 from models.experimental import attempt_load
 from utils.general import check_img_size, non_max_suppression
+
+class IDetectD(nn.Module):
+
+    def __init__(self, nc=None, anchors=(), ch=()):  # detection layer
+        super(IDetectD, self).__init__()
+        self.model = nc.eval()
+
+    def forward(self, x):
+        return self.model(x)[0]
 
 COLORS = np.random.uniform(0, 255, size=(80, 3))
 
@@ -82,13 +92,14 @@ half = device != 'cpu'
 basename = os.path.basename(opt.input)
 
 # Load model
-model = attempt_load(weights, map_location=device)  # load FP32 model
-imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
+orig_model = attempt_load(weights, map_location=device)  # load FP32 model
+model = IDetectD(nc=orig_model)
+imgsz = check_img_size(imgsz, s=orig_model.stride.max())  # check img_size
 if half:
     model.half()  # to FP16
 model.eval()
 model.cpu()
-target_layers = [model.model[-5], model.model[-4], model.model[-2], model.model[-6]]
+target_layers = [model.model.model[-5], model.model.model[-4], model.model.model[-2], model.model.model[-6]]
 print(target_layers)
 
 cam = EigenCAM(model, target_layers, use_cuda=False)
