@@ -17,11 +17,11 @@ from PIL import Image
 from models.experimental import attempt_load
 from utils.general import check_img_size, non_max_suppression
 
-class IDetectD(nn.Module):
+class CamCompatibleModel(nn.Module):
 
-    def __init__(self, nc=None, anchors=(), ch=()):  # detection layer
-        super(IDetectD, self).__init__()
-        self.model = nc.eval()
+    def __init__(self, yolo_model=None):  # detection layer
+        super(CamCompatibleModel, self).__init__()
+        self.model = yolo_model.eval()
 
     def forward(self, x):
         return self.model(x)[0]
@@ -93,7 +93,7 @@ basename = os.path.basename(opt.input)
 
 # Load model
 orig_model = attempt_load(weights, map_location=device)  # load FP32 model
-model = IDetectD(nc=orig_model)
+model = CamCompatibleModel(yolo_model=orig_model)
 imgsz = check_img_size(imgsz, s=orig_model.stride.max())  # check img_size
 if half:
     model.half()  # to FP16
