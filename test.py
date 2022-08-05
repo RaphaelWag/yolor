@@ -123,7 +123,7 @@ def test(data,
 
             # Compute loss
             if training:  # if model has loss hyperparameters
-                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:4]  # box, obj, cls, reg losses
+                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:6]  # box, obj, cls, reg losses
 
             # Run NMS
             t = time_synchronized()
