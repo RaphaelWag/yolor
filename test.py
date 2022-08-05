@@ -101,8 +101,8 @@ def test(data,
     seen = 0
     names = {k: v for k, v in enumerate(model.names if hasattr(model, 'names') else model.module.names)}
     coco91class = coco80_to_coco91_class()
-    s = ('%20s' + '%12s' * 7) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95', 'dst mse')
-    p, r, f1, mp, mr, map50, map, t0, t1, dstmse = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
+    s = ('%20s' + '%12s' * 9) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95', 'dst', 'rad', 'ang')
+    p, r, f1, mp, mr, map50, map, t0, t1, dstmse, radmse, angmse = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
     loss = torch.zeros(4, device=device)
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     val0 = time.time()
@@ -123,7 +123,7 @@ def test(data,
 
             # Compute loss
             if training:  # if model has loss hyperparameters
-                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:4]  # box, obj, cls, dstmse
+                loss += compute_loss([x.float() for x in train_out], targets, model)[1][:4]  # box, obj, cls, reg losses
 
             # Run NMS
             t = time_synchronized()
@@ -148,9 +148,10 @@ def test(data,
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
                 x = pred.clone()
                 x[:, :4] = scale_coords(img[si].shape[1:], x[:, :4], shapes[si][0], shapes[si][1])  # to original
-                for *xyxy, conf, dst, cls in x:
+                for *xyxy, conf, dst, rad, ang, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf, dst) if save_conf else (cls, *xywh, dst)  # label format
+                    line = (cls, *xywh, conf, dst, rad, ang) if save_conf else (
+                        cls, *xywh, dst, rad, ang)  # label format
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -239,8 +240,9 @@ def test(data,
         wandb.log({"Validation": [wandb.Image(str(x), caption=x.name) for x in sorted(save_dir.glob('test*.jpg'))]})
 
     # Print results
-    pf = '%20s' + '%12.3g' * 7  # print format
-    print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, loss[3]/len(dataloader)))
+    pf = '%20s' + '%12.3g' * 9  # print format
+    print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, loss[3] / len(dataloader), loss[4] / len(dataloader),
+                loss[5] / len(dataloader)))
 
     # Print results per class
     if verbose and nc > 1 and len(stats):

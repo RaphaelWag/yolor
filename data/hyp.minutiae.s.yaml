@@ -5,7 +5,9 @@ weight_decay: 0.0005  # optimizer weight decay 5e-4
 warmup_epochs: 3.0  # warmup epochs (fractions ok)
 warmup_momentum: 0.8  # warmup initial momentum
 warmup_bias_lr: 0.1  # warmup initial bias lr
-dst_lg: 1.0 # distance regression loss gain
+distance: 5.0 # distance regression loss gain
+radius: 2.0 # radius regression loss gain
+angle: 1.0 # angle regression loss gain
 box: 0.05  # box loss gain
 cls: 0.5  # cls loss gain
 cls_pw: 1.0  # cls BCELoss positive_weight

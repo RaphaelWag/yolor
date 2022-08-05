@@ -62,16 +62,16 @@ class FocalLoss(nn.Module):
 def compute_loss(p, targets, model):  # predictions, targets, model
     device = targets.device
     # print(device)
-    lcls, lbox, lobj, ldst = torch.zeros(1, device=device), torch.zeros(1, device=device), \
-                             torch.zeros(1, device=device), torch.zeros(1, device=device)
+    lcls, lbox, lobj, ldst, lrad, lang = torch.zeros(1, device=device), torch.zeros(1, device=device), \
+                                         torch.zeros(1, device=device), torch.zeros(1, device=device), \
+                                         torch.zeros(1, device=device), torch.zeros(1, device=device)
     tcls, tbox, indices, anchors, tdst, trad, tang = build_targets(p, targets, model)  # targets
     h = model.hyp  # hyperparameters
 
     # Define criteria
     BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['cls_pw']])).to(device)
     BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['obj_pw']])).to(device)
-    MSEdst = nn.MSELoss()
-    MSEdst = MSEdst.to(device)
+    MSEdst, MSErad, MSEang = nn.MSELoss().to(device), nn.MSELoss().to(device), nn.MSELoss().to(device)
 
     # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
     cp, cn = smooth_BCE(eps=0.0)
@@ -118,10 +118,15 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Single Regression
             pdst = ps[..., 5].sigmoid()
+            prad = ps[..., 6].sigmoid()
+            pang = ps[..., 7].sigmoid()
             if model.training:
-                ldst += MSEdst(pdst, trad[i])  # we can replace this loss function with rmse or anything we like
+                ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
+                lrad += MSErad(prad, trad[i])
+                # lang += TODO: define loss for angle regression
             else:
-                ldst += MSEdst(pdst, trad[i])  # for validation we always want mse as a metric rather than a loss
+                ldst += MSEdst(pdst, tdst[i])  # for validation we always want mse as a metric rather than a loss
+                lrad += MSErad(prad, trad[i])
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
 
     s = 3 / no  # output count scaling
@@ -129,11 +134,11 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lobj *= h['obj'] * s * (1.4 if no >= 4 else 1.)
     lcls *= h['cls'] * s
     if model.training:
-        ldst *= h['dst_lg'] * s
+        ldst *= h['distance'] * s
+        lrad *= h['radius'] * s
     bs = tobj.shape[0]  # batch size
-    ldst = ldst.to(device)
-    loss = lbox + lobj + lcls + ldst
-    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, loss)).detach()
+    loss = lbox + lobj + lcls + ldst + lrad # TODO: add angle loss
+    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, lrad, lang, loss)).detach()
 
 
 def build_targets(p, targets, model):
@@ -189,8 +194,8 @@ def build_targets(p, targets, model):
         tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
-        tdst.append(t[:, 6].float() + 0.5) # distance
-        trad.append(t[:, 7].float() / 2 + 0.5) # radius
-        tang.append(t[:, 8].float()) # angle
+        tdst.append(t[:, 6].float() + 0.5)  # distance
+        trad.append(t[:, 7].float() / 2 + 0.5)  # radius
+        tang.append(t[:, 8].float())  # angle
 
     return tcls, tbox, indices, anch, tdst, trad, tang
