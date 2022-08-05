@@ -291,7 +291,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
             continue
 
         # Compute conf
-        x[:, 6:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
+        x[:, 8:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
         box = xywh2xyxy(x[:, :4])
