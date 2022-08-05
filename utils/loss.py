@@ -136,6 +136,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     if model.training:
         ldst *= h['distance'] * s
         lrad *= h['radius'] * s
+        lang *= h['angle']
     bs = tobj.shape[0]  # batch size
     loss = lbox + lobj + lcls + ldst + lrad # TODO: add angle loss
     return loss * bs, torch.cat((lbox, lobj, lcls, ldst, lrad, lang, loss)).detach()

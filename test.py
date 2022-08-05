@@ -103,7 +103,7 @@ def test(data,
     coco91class = coco80_to_coco91_class()
     s = ('%20s' + '%12s' * 9) % ('Class', 'Images', 'Targets', 'P', 'R', 'mAP@.5', 'mAP@.5:.95', 'dst', 'rad', 'ang')
     p, r, f1, mp, mr, map50, map, t0, t1, dstmse, radmse, angmse = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.
-    loss = torch.zeros(4, device=device)
+    loss = torch.zeros(6, device=device)
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     val0 = time.time()
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
