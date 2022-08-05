@@ -108,9 +108,9 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Classification
             if model.nc > 1:  # cls loss (only if multiple classes)
-                t = torch.full_like(ps[:, 6:], cn, device=device)  # targets
+                t = torch.full_like(ps[:, 8:], cn, device=device)  # targets
                 t[range(n), tcls[i]] = cp
-                lcls += BCEcls(ps[:, 6:], t)  # BCE
+                lcls += BCEcls(ps[:, 8:], t)  # BCE
 
             # Append targets to text file
             # with open('targets.txt', 'a') as file:
@@ -136,7 +136,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     if model.training:
         ldst *= h['distance'] * s
         lrad *= h['radius'] * s
-        lang *= h['angle']
+        # lang *= h['angle']
     bs = tobj.shape[0]  # batch size
     loss = lbox + lobj + lcls + ldst + lrad # TODO: add angle loss
     return loss * bs, torch.cat((lbox, lobj, lcls, ldst, lrad, lang, loss)).detach()
