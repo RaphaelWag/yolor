@@ -227,14 +227,14 @@ def build_targets(p, targets, model):
         tdst.append(t[:, 6].float() + 0.5)  # distance
         # calculate angle coordinates on unit sphere
         gamma_2 = torch.remainder(t[:, 8], 180) * 0.034906585039  # 0.034906585039 = 2 pi/360 * 2
-        tang_x.append(torch.cos(gamma_2) * 2 - 1)
-        tang_y.append(torch.sin(gamma_2) * 2 - 1)
+        tang_x.append(torch.cos(gamma_2) / 2 + 0.5)
+        tang_y.append(torch.sin(gamma_2) / 2 + 0.5)
 
         # calculate radius coordinates on unit sphere
         radius_sign = torch.sign(t[:, 8] - 180)
         r = t[:, 7] * radius_sign
         alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
-        trad_x.append(torch.cos(alpha_2) * 2 - 1)
-        trad_y.append(torch.sin(alpha_2) * 2 - 1)
+        trad_x.append(torch.cos(alpha_2) / 2 + 0.5)
+        trad_y.append(torch.sin(alpha_2) / 2 + 0.5)
 
     return tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y
