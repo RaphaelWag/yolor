@@ -174,7 +174,7 @@ def build_targets(p, targets, model):
     det = model.module.model[-1] if is_parallel(model) else model.model[-1]  # Detect() module
     na, nt = det.na, targets.shape[0]  # number of anchors, targets
     tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y = [], [], [], [], [], [], [], [], []
-    gain = torch.ones(10, device=targets.device)  # normalized to gridspace gain
+    gain = torch.ones(12, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
     v = model.hyp['v']
@@ -188,10 +188,10 @@ def build_targets(p, targets, model):
 
     for i in range(det.nl):
         anchors = det.anchors[i]
-        gain[2:6] = torch.tensor(p[i].shape - 2)[[3, 2, 3, 2]]  # xyxy gain
+        gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain
 
         # Match targets to anchors
-        t = targets * gain
+        t = targets * gain[0:10]
         if nt:
             # Matches
             r = t[:, :, 4:6] / anchors[:, None]  # wh ratio
