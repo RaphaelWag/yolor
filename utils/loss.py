@@ -166,7 +166,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     loss = lbox + lobj + lcls + ldst + lrad_x + lrad_y + lang_x + lang_y
     g_rad = lrad_x + lrad_y
     g_ang = lang_x + lang_y
-    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, g_rad + g_ang, loss)).detach()
+    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, g_rad, g_ang, loss)).detach()
 
 
 def build_targets(p, targets, model):
