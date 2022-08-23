@@ -60,6 +60,7 @@ class FocalLoss(nn.Module):
 
 
 def compute_loss(p, targets, model):  # predictions, targets, model
+    # TODO normalize coordinates
     device = targets.device
     # print(device)
     lcls, lbox, lobj, ldst, lrad_x, lrad_y, lang_x, lang_y = torch.zeros(1, device=device), \
@@ -187,7 +188,7 @@ def build_targets(p, targets, model):
 
     for i in range(det.nl):
         anchors = det.anchors[i]
-        gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain
+        gain[2:6] = torch.tensor(p[i].shape - 2)[[3, 2, 3, 2]]  # xyxy gain
 
         # Match targets to anchors
         t = targets * gain
@@ -230,7 +231,7 @@ def build_targets(p, targets, model):
         tang_y.append(torch.sin(gamma_2))
 
         # calculate radius coordinates on unit sphere
-        radius_sign = torch.tensor([1 if e >= 180 else -1 for e in torch[:, 8]])
+        radius_sign = torch.sign(t[:, 8] - 180)
         r = t[:, 7] * radius_sign
         alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
         trad_x.append(torch.cos(alpha_2))
