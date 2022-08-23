@@ -1224,9 +1224,11 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
         i = box_candidates(box1=targets[:, 1:5].T * s, box2=xy.T)
         targets = targets[i]
         targets[:, 1:5] = xy[i]
+
         # resize distance and radius
         targets[:, 5] = targets[:, 5] * s
-        targets[:, 6] = targets[:, 6] * np.sqrt(s)
+        targets[:, 6] = targets[:, 6] * s
+        targets[:, 7] = targets[:, 7] + a
 
     return img, targets
 

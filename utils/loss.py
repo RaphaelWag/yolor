@@ -62,16 +62,23 @@ class FocalLoss(nn.Module):
 def compute_loss(p, targets, model):  # predictions, targets, model
     device = targets.device
     # print(device)
-    lcls, lbox, lobj, ldst, lrad, lang = torch.zeros(1, device=device), torch.zeros(1, device=device), \
-                                         torch.zeros(1, device=device), torch.zeros(1, device=device), \
-                                         torch.zeros(1, device=device), torch.zeros(1, device=device)
-    tcls, tbox, indices, anchors, tdst, trad, tang = build_targets(p, targets, model)  # targets
+    lcls, lbox, lobj, ldst, lrad_x, lrad_y, lang_x, lang_y = torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device), \
+                                                             torch.zeros(1, device=device)
+    tcls, tbox, indices, anchors, tdst, trad_x, trad_y, tang_x, tang_y = build_targets(p, targets, model)  # targets
     h = model.hyp  # hyperparameters
 
     # Define criteria
     BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['cls_pw']])).to(device)
     BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['obj_pw']])).to(device)
-    MSEdst, MSErad, MSEang = nn.MSELoss().to(device), nn.MSELoss().to(device), nn.MSELoss().to(device)
+    MSEdst, MSErad_x, MSErad_y, MSEang_x, MSEang_y = nn.MSELoss().to(device), nn.MSELoss().to(device), \
+                                                     nn.MSELoss().to(device), nn.MSELoss().to(device), \
+                                                     nn.MSELoss().to(device)
 
     # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
     cp, cn = smooth_BCE(eps=0.0)
@@ -118,15 +125,23 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Single Regression
             pdst = ps[..., 5].sigmoid()
-            prad = ps[..., 6].sigmoid()
-            pang = ps[..., 7].sigmoid()
+            prad_x = ps[..., 6].sigmoid()
+            prad_y = ps[..., 7].sigmoid()
+            pang_x = ps[..., 8].sigmoid()
+            pang_y = ps[..., 9].sigmoid()
             if model.training:
                 ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
-                lrad += MSErad(prad, trad[i])
+                lrad_x += MSErad_x(prad_x, trad_x[i])
+                lrad_y += MSErad_y(prad_y, trad_y[i])
+                lang_x += MSEang_x(pang_x, tang_x[i])
+                lang_y += MSEang_y(pang_y, tang_y[i])
                 # lang += TODO: define loss for angle regression
             else:
-                ldst += MSEdst(pdst, tdst[i])  # for validation we always want mse as a metric rather than a loss
-                lrad += MSErad(prad, trad[i])
+                lrad_x += MSErad_x(prad_x, trad_x[i])
+                lrad_y += MSErad_y(prad_y, trad_y[i])
+                lang_x += MSEang_x(pang_x, tang_x[i])
+                lang_y += MSEang_y(pang_y, tang_y[i])
+
         lobj += BCEobj(pi[..., 4], tobj) * balance[i]  # obj loss
 
     s = 3 / no  # output count scaling
@@ -135,21 +150,34 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lcls *= h['cls'] * s
     if model.training:
         ldst *= h['distance'] * s
-        lrad *= h['radius'] * s
-        # lang *= h['angle']
+        lrad_x *= h['radius'] * s
+        lrad_y *= h['radius'] * s
+        lang_x *= h['angle'] * s
+        lang_y *= h['angle'] * s
+    else:
+        ldst *= s
+        lrad_x *= s
+        lrad_y *= s
+        lang_x *= s
+        lang_y *= s
+
     bs = tobj.shape[0]  # batch size
-    loss = lbox + lobj + lcls + ldst + lrad # TODO: add angle loss
-    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, lrad, lang, loss)).detach()
+    loss = lbox + lobj + lcls + ldst + lrad_x + lrad_y + lang_x + lang_y
+    g_rad = lrad_x + lrad_y
+    g_ang = lang_x + lang_y
+    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, g_rad + g_ang, loss)).detach()
 
 
 def build_targets(p, targets, model):
     # Build targets for compute_loss(), input targets(image,class,x,y,w,h,dst)
     det = model.module.model[-1] if is_parallel(model) else model.model[-1]  # Detect() module
     na, nt = det.na, targets.shape[0]  # number of anchors, targets
-    tcls, tbox, indices, anch, tdst, trad, tang = [], [], [], [], [], [], []
+    tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y = [], [], [], [], [], [], [], [], []
     gain = torch.ones(10, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
+    v = model.hyp['v']
+    v_sq = v ** 2
 
     g = 0.5  # bias
     off = torch.tensor([[0, 0],
@@ -196,7 +224,16 @@ def build_targets(p, targets, model):
         anch.append(anchors[a])  # anchors
         tcls.append(c)  # class
         tdst.append(t[:, 6].float() + 0.5)  # distance
-        trad.append(t[:, 7].float() / 2 + 0.5)  # radius
-        tang.append(t[:, 8].float())  # angle
+        # calculate angle coordinates on unit sphere
+        gamma_2 = torch.remainder(t[:, 8], 180) * 0.034906585039  # 0.034906585039 = 2 pi/360 * 2
+        tang_x.append(torch.cos(gamma_2))
+        tang_y.append(torch.sin(gamma_2))
 
-    return tcls, tbox, indices, anch, tdst, trad, tang
+        # calculate radius coordinates on unit sphere
+        radius_sign = torch.tensor([1 if e >= 180 else -1 for e in torch[:, 8]])
+        r = t[:, 7] * radius_sign
+        alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
+        trad_x.append(torch.cos(alpha_2))
+        trad_y.append(torch.sin(alpha_2))
+
+    return tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y

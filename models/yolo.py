@@ -77,7 +77,7 @@ class IDetect(nn.Module):
     def __init__(self, nc=80, anchors=(), ch=()):  # detection layer
         super(IDetect, self).__init__()
         self.nc = nc  # number of classes
-        self.no = nc + 8  # number of outputs per anchor, nc + box + objectness + minutiae regression
+        self.no = nc + 10  # number of outputs per anchor, nc + bbox (4)  + objectness (1) + dst (1) + rad (2) + ang (2)
         self.nl = len(anchors)  # number of detection layers
         self.na = len(anchors[0]) // 2  # number of anchors
         self.grid = [torch.zeros(1)] * self.nl  # init grid
@@ -105,8 +105,8 @@ class IDetect(nn.Module):
                 y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
                 y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
                 y[..., 5] -= 0.5
-                y[..., 6] = (y[..., 6] - 0.5) * 2
-                # y[..., 7] = # TODO: tune this
+                # no more changes to y[..., (6,7,8,9)]
+                # calculation of rad and ang is done in inference script
                 z.append(y.view(bs, -1, self.no))
 
         return x if self.training else (torch.cat(z, 1), x)
