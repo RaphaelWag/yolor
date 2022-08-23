@@ -205,7 +205,7 @@ def build_targets(p, targets, model):
             j, k = ((gxy % 1. < g) & (gxy > 1.)).T
             l, m = ((gxi % 1. < g) & (gxi > 1.)).T
             j = torch.stack((torch.ones_like(j), j, k, l, m))
-            t = t.repeat((5, 1, 1))[j]  # change this to 6, 1, 1 from 5, 1, 1?
+            t = t.repeat((5, 1, 1))[j]
             offsets = (torch.zeros_like(gxy)[None] + off[:, None])[j]
         else:
             t = targets[0]
@@ -219,7 +219,7 @@ def build_targets(p, targets, model):
         gi, gj = gij.T  # grid xy indices
 
         # Append
-        a = t[:, 7].long()  # anchor indices
+        a = t[:, 9].long()  # anchor indices
         indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))  # image, anchor, grid indices
         tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
         anch.append(anchors[a])  # anchors
@@ -227,14 +227,14 @@ def build_targets(p, targets, model):
         tdst.append(t[:, 6].float() + 0.5)  # distance
         # calculate angle coordinates on unit sphere
         gamma_2 = torch.remainder(t[:, 8], 180) * 0.034906585039  # 0.034906585039 = 2 pi/360 * 2
-        tang_x.append(torch.cos(gamma_2) / 2 + 0.5)
-        tang_y.append(torch.sin(gamma_2) / 2 + 0.5)
+        tang_x.append(torch.cos(gamma_2) / 4 + 0.5)
+        tang_y.append(torch.sin(gamma_2) / 4 + 0.5)
 
         # calculate radius coordinates on unit sphere
         radius_sign = torch.sign(t[:, 8] - 180)
         r = t[:, 7] * radius_sign
         alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
-        trad_x.append(torch.cos(alpha_2) / 2 + 0.5)
-        trad_y.append(torch.sin(alpha_2) / 2 + 0.5)
+        trad_x.append(torch.cos(alpha_2) / 4 + 0.5)
+        trad_y.append(torch.sin(alpha_2) / 4 + 0.5)
 
     return tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y
