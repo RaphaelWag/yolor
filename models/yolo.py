@@ -105,8 +105,10 @@ class IDetect(nn.Module):
                 y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
                 y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
                 y[..., 5] -= 0.5
-                # no more changes to y[..., (6,7,8,9)]
-                # calculation of rad and ang is done in inference script
+                y[..., 6] = (y[..., 6] - 0.5) * 4
+                y[..., 7] = (y[..., 7] - 0.5) * 4
+                y[..., 8] = (y[..., 8] - 0.5) * 4
+                y[..., 9] = (y[..., 9] - 0.5) * 4
                 z.append(y.view(bs, -1, self.no))
 
         return x if self.training else (torch.cat(z, 1), x)
