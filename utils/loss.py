@@ -136,8 +136,9 @@ def compute_loss(p, targets, model):  # predictions, targets, model
                 lrad_y += MSErad_y(prad_y, trad_y[i])
                 lang_x += MSEang_x(pang_x, tang_x[i])
                 lang_y += MSEang_y(pang_y, tang_y[i])
-                # lang += TODO: define loss for angle regression
+
             else:
+                ldst += MSEdst(pdst, tdst[i])
                 lrad_x += MSErad_x(prad_x, trad_x[i])
                 lrad_y += MSErad_y(prad_y, trad_y[i])
                 lang_x += MSEang_x(pang_x, tang_x[i])
@@ -231,7 +232,7 @@ def build_targets(p, targets, model):
         tang_y.append(torch.sin(gamma_2) / 4 + 0.5)
 
         # calculate radius coordinates on unit sphere
-        radius_sign = torch.sign(t[:, 8] - 180)
+        radius_sign = torch.sign(t[:, 8] + 1e-6 - 180)
         r = t[:, 7] * radius_sign
         alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
         trad_x.append(torch.cos(alpha_2) / 4 + 0.5)
