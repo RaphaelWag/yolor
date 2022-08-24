@@ -148,10 +148,10 @@ def test(data,
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
                 x = pred.clone()
                 x[:, :4] = scale_coords(img[si].shape[1:], x[:, :4], shapes[si][0], shapes[si][1])  # to original
-                for *xyxy, conf, dst, rad, ang, cls in x:
+                for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf, dst, rad, ang) if save_conf else (
-                        cls, *xywh, dst, rad, ang)  # label format
+                    line = (cls, *xywh, conf, dst, rad_x, rad_y, ang_x, ang_y) if save_conf else (
+                        cls, *xywh, dst, rad_x, rad_y, ang_x, ang_y)  # label format
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -194,7 +194,7 @@ def test(data,
                 # Per target class
                 for cls in torch.unique(tcls_tensor):
                     ti = (cls == tcls_tensor).nonzero(as_tuple=False).view(-1)  # prediction indices
-                    pi = (cls == pred[:, 8]).nonzero(as_tuple=False).view(-1)  # target indices
+                    pi = (cls == pred[:, 10]).nonzero(as_tuple=False).view(-1)  # target indices
 
                     # Search for detections
                     if pi.shape[0]:
@@ -213,7 +213,7 @@ def test(data,
                                     break
 
             # Append statistics (correct, conf, pcls, tcls)
-            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 8].cpu(), tcls))
+            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 10].cpu(), tcls))
 
         # Plot images
         if plots and batch_i < 3:

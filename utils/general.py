@@ -269,7 +269,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
          detections with shape: nx6 (x1, y1, x2, y2, conf, cls)
     """
 
-    nc = prediction[0].shape[1] - 8  # number of classes
+    nc = prediction[0].shape[1] - 10  # number of classes
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Settings
@@ -291,25 +291,27 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
             continue
 
         # Compute conf
-        x[:, 8:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
+        x[:, 10:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
         box = xywh2xyxy(x[:, :4])
 
         # Detections matrix nx6 (xyxy, conf, cls)
         if multi_label:
-            i, j = (x[:, 8:] > conf_thres).nonzero(as_tuple=False).T
+            i, j = (x[:, 10:] > conf_thres).nonzero(as_tuple=False).T
             x = torch.cat((box[i], x[i, j + 5, None], j[:, None].float()), 1)
         else:  # best class only
-            conf, j = x[:, 8:].max(1, keepdim=True)
+            conf, j = x[:, 10:].max(1, keepdim=True)
             dst = x[:, 5:6]
-            rad = x[:, 6:7]
-            ang = x[:, 7:8] * 0
-            x = torch.cat((box, conf, dst, rad, ang, j.float()), 1)[conf.view(-1) > conf_thres]
+            rad_x = x[:, 6:7]
+            rad_y = x[:, 7:8]
+            ang_x = x[:, 8:9]
+            ang_y = x[:, 9:10]
+            x = torch.cat((box, conf, dst, rad_x, rad_y, ang_x, ang_y, j.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class
         if classes:
-            x = x[(x[:, 8:9] == torch.tensor(classes, device=x.device)).any(1)]
+            x = x[(x[:, 10:11] == torch.tensor(classes, device=x.device)).any(1)]
 
         # Apply finite constraint
         # if not torch.isfinite(x).all():
@@ -324,7 +326,7 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         # x = x[x[:, 4].argsort(descending=True)]
 
         # Batched NMS
-        c = x[:, 8:9] * (0 if agnostic else max_wh)  # classes
+        c = x[:, 10:11] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + c, x[:, 4]  # boxes (offset by class), scores
         i = torch.ops.torchvision.nms(boxes, scores, iou_thres)
         if i.shape[0] > max_det:  # limit detections
