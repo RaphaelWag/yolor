@@ -614,7 +614,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 img = np.flipud(img)
                 if nL:
                     labels[:, 2] = 1 - labels[:, 2]
-                    labels[:, 7] = torch.remainder((540 - labels[:, 7]), 360)
+                    labels[:, 7] = np.mod((540 - labels[:, 7]), 360)
 
             # flip left-right
             if random.random() < hyp['fliplr']:
