@@ -2087,3 +2087,21 @@ class SPPCSP(nn.Module):
         self.bn = nn.BatchNorm2d(2 * c_)
         self.act = nn.SiLU()
         self.cv7 = Conv(2 * c_, c2, 1, 1)
+
+class BottleneckCSP2TR(nn.Module):
+    # CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks
+    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super(BottleneckCSP2TR, self).__init__()
+        c_ = int(c2)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = nn.Conv2d(c_, c_, 1, 1, bias=False)
+        self.cv3 = Conv(2 * c_, c2, 1, 1)
+        self.bn = nn.BatchNorm2d(2 * c_)
+        self.act = nn.SiLU()
+        self.m = TransformerBlock(c_, c_, 4, n)
+
+    def forward(self, x):
+        x1 = self.cv1(x)
+        y1 = self.m(x1)
+        y2 = self.cv2(x1)
+        return self.cv3(self.act(self.bn(torch.cat((y1, y2), dim=1))))
