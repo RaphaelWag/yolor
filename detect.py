@@ -99,10 +99,11 @@ def detect(save_img=False):
                     s += '%g %ss, ' % (n, names[int(c)])  # add to string
 
                 # Write results
-                for *xyxy, conf, dst, cls in reversed(det):
+                for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf, dst) if opt.save_conf else (cls, *xywh, dst)  # label format
+                        line = (cls, *xywh,  conf, dst, rad_x, rad_y, ang_x, ang_y,) if opt.save_conf else \
+                            (cls, *xywh, dst, rad_x, rad_y, ang_x, ang_y)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
