@@ -234,7 +234,7 @@ def build_targets(p, targets, model):
         # calculate radius coordinates on unit sphere
         radius_sign = torch.sign(t[:, 8] + 1e-6 - 180)
         r = t[:, 7] * radius_sign
-        alpha_2 = torch.arccos(r / (r ** 2 + v_sq)) * 2
+        alpha_2 = torch.arccos(r / torch.sqrt(r ** 2 + v_sq)) * 2
         trad_x.append(torch.cos(alpha_2) / 4 + 0.5)
         trad_y.append(torch.sin(alpha_2) / 4 + 0.5)
 
