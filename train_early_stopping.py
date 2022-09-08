@@ -380,7 +380,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 train_loss_d[epoch] = (train_loss[epoch] - train_loss[epoch - 2]) / 2
             if epoch >= opt.min_warmup:
                 train_loss_d_mean[epoch] = np.mean(train_loss_d[epoch - 4:epoch + 1])
-                if train_loss_d_mean <= opt.tol_warmup: validate = True
+                if train_loss_d_mean[epoch] <= opt.tol_warmup: validate = True
         # DDP process 0 or single-GPU
         if rank in [-1, 0]:
             # mAP
@@ -404,7 +404,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     class_metrics[epoch] = maps
                     class_metrics_d[epoch] = (class_metrics[epoch] - class_metrics[epoch - 2]) / 2
                     class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1])
-                    if class_metrics_d_mean <= opt.tol_stopping:
+                    if class_metrics_d_mean[epoch] <= opt.tol_stopping:
                         quit = True
                     time_val = np.append(time_val, val_time)
 
