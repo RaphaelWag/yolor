@@ -37,11 +37,7 @@ def test(data,
          save_conf=False,
          plots=True,
          log_imgs=0,  # number of logged images
-         epoch=0,
-         ap_thresh=None):
-    if ap_thresh is None:
-        ap_thresh = []
-    saving = [False for _ in range(len(ap_thresh))]
+         epoch=0):
 
     # Initialize/load model and set device
     training = model is not None
@@ -229,7 +225,6 @@ def test(data,
         mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
         nt = np.bincount(stats[3].astype(np.int64), minlength=nc)  # number of targets per class
         min_ap = min(ap)
-        saving = [min_ap > thresh for thresh in ap_thresh]
     else:
         nt = torch.zeros(1)
 
@@ -289,7 +284,7 @@ def test(data,
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
-    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, val_time, saving
+    return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t, val_time
 
 
 if __name__ == '__main__':

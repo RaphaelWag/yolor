@@ -43,8 +43,6 @@ except ImportError:
 
 
 def train(hyp, opt, device, tb_writer=None, wandb=None):
-    saved = [False for _ in range(len(opt.ap_thresh))]
-    saving = None
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
@@ -392,7 +390,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if quit: final_epoch = True
             if not opt.notest or final_epoch:  # Calculate mAP
                 if validate:
-                    results, maps, times, val_time, saving = test.test(opt.data,
+                    results, maps, times, val_time = test.test(opt.data,
                                                                        batch_size=batch_size * 2,
                                                                        imgsz=imgsz_test,
                                                                        model=ema.ema,
@@ -402,8 +400,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        plots=plots and final_epoch,
                                                                        log_imgs=opt.log_imgs if wandb else 0,
                                                                        verbose=opt.verbose,
-                                                                       epoch=epoch,
-                                                                       ap_thresh=opt.ap_thresh)
+                                                                       epoch=epoch)
                     class_metrics[epoch] = maps
                     class_metrics_d[epoch] = (class_metrics[epoch] - class_metrics[epoch - 2]) / 2
                     class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1])
@@ -473,11 +470,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 if best_fitness == fi:
                     torch.save(ckpt, best)
 
-                if saving is not None:
-                    for k in range(len(opt.ap_thresh)):
-                        if saving[k] and not saved[k]:
-                            saved[k] = True
-                            torch.save(ckpt, wdir / 'thresh_{}_{}.pt'.format(opt.ap_thresh[k], epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
         if final_epoch: break
@@ -555,7 +547,6 @@ if __name__ == '__main__':
     parser.add_argument('--tol-stopping', type=float, default=1e-4, help='tolerance for early stopping')
 
     opt = parser.parse_args()
-    opt.ap_thresh = eval(opt.ap_thresh)
 
     # Set DDP variables
     opt.total_batch_size = opt.batch_size
