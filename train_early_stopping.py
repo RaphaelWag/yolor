@@ -380,7 +380,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 train_loss_d[epoch] = (train_loss[epoch] - train_loss[epoch - 2]) / 2
             if epoch >= opt.min_warmup:
                 train_loss_d_mean[epoch] = np.mean(train_loss_d[epoch - 4:epoch + 1])
-                if train_loss_d_mean[epoch] <= opt.tol_warmup: validate = True
+                if np.abs(train_loss_d_mean[epoch]) <= opt.tol_warmup: validate = True
         # DDP process 0 or single-GPU
         if rank in [-1, 0]:
             # mAP
