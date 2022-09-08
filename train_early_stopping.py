@@ -48,6 +48,13 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
+    validate = False
+    quit = False
+    final_epoch = False
+    train_loss = np.zeros(shape=(epochs,))
+    train_loss_d = np.zeros(shape=(epochs,))
+    train_loss_d[0] = train_loss_d[1] = 1  # to avoid cold start problem
+    train_loss_d_mean = np.zeros(shape=(epochs,))
 
     # Directories
     wdir = save_dir / 'weights'
@@ -73,6 +80,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     train_path = data_dict['train']
     test_path = data_dict['val']
     nc, names = (1, ['item']) if opt.single_cls else (int(data_dict['nc']), data_dict['names'])  # number classes, names
+    class_metrics = np.zeros(shape=(epochs, nc))
+    class_metrics_d = np.ones(shape=(epochs, nc))
+    class_metrics_d_mean = np.zeros(shape=(epochs, nc))
     assert len(names) == nc, '%g names found for nc=%g dataset in %s' % (len(names), nc, opt.data)  # check
 
     # Model
@@ -362,19 +372,26 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             # end batch ------------------------------------------------------------------------------------------------
         # end epoch ----------------------------------------------------------------------------------------------------
         time_train = np.append(time_train, time.time() - train0)
+        train_loss[epoch] = mloss[-1]
 
         # Scheduler
         lr = [x['lr'] for x in optimizer.param_groups]  # for tensorboard
         scheduler.step()
-
+        if not validate:
+            if epoch >= 2:  # to avoid cold start problem
+                train_loss_d[epoch] = (train_loss[epoch] - train_loss[epoch - 2]) / 2
+            if epoch >= opt.min_warmup:
+                train_loss_d_mean[epoch] = np.mean(train_loss_d[epoch - 4:epoch + 1])
+                if train_loss_d_mean <= opt.tol_warmup: validate = True
         # DDP process 0 or single-GPU
         if rank in [-1, 0]:
             # mAP
             if ema:
                 ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'gr', 'names', 'stride'])
             final_epoch = epoch + 1 == epochs
+            if quit: final_epoch = True
             if not opt.notest or final_epoch:  # Calculate mAP
-                if epoch >= 3:
+                if validate:
                     results, maps, times, val_time, saving = test.test(opt.data,
                                                                        batch_size=batch_size * 2,
                                                                        imgsz=imgsz_test,
@@ -387,7 +404,13 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        verbose=opt.verbose,
                                                                        epoch=epoch,
                                                                        ap_thresh=opt.ap_thresh)
+                    class_metrics[epoch] = maps
+                    class_metrics_d[epoch] = (class_metrics[epoch] - class_metrics[epoch - 2]) / 2
+                    class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1])
+                    if class_metrics_d_mean <= opt.tol_stopping:
+                        quit = True
                     time_val = np.append(time_val, val_time)
+
             # Write
             with open(results_file, 'a') as f:
                 f.write(s + '%10.4g' * 7 % results + '\n')  # P, R, mAP@.5, mAP@.5-.95, val_loss(box, obj, cls)
@@ -457,6 +480,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                             torch.save(ckpt, wdir / 'thresh_{}_{}.pt'.format(opt.ap_thresh[k], epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
+        if final_epoch: break
     # end training
 
     if rank in [-1, 0]:
@@ -525,10 +549,10 @@ if __name__ == '__main__':
     parser.add_argument('--freeze-bn', action='store_true', help='freeze batch norm layers')
     parser.add_argument('--freeze-bn-buffers', action='store_true', help='freeze running mean and var')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
-    parser.add_argument('--stop-tolerance', type=float, default=1e-2, help='stopping tolerance for early stopping')
-    parser.add_argument('--stop-metric', type=str, default='mAP@0.5', help='stopping metric for early stopping')
-    parser.add_argument('--stop-rounds', type=int, default=4, help='stopping rounds for early stopping')
-    parser.add_argument('--stop-target', type=float, default=None, help='stopping target value for early stopping')
+    parser.add_argument('--min-warmup', type=int, default=5, help='minimum epochs for warmup')
+    parser.add_argument('--tol-warmup', type=float, default=1e-3,
+                        help='tolerance for loss derivative to start validating')
+    parser.add_argument('--tol-stopping', type=float, default=1e-4, help='tolerance for early stopping')
 
     opt = parser.parse_args()
     opt.ap_thresh = eval(opt.ap_thresh)
