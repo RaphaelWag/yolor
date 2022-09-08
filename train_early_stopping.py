@@ -403,8 +403,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        epoch=epoch)
                     class_metrics[epoch] = maps
                     class_metrics_d[epoch] = (class_metrics[epoch] - class_metrics[epoch - 2]) / 2
-                    class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1])
-                    if class_metrics_d_mean[epoch] <= opt.tol_stopping:
+                    class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1], axis=0)
+                    if np.max(np.abs(class_metrics_d_mean[epoch])) <= opt.tol_stopping:
                         quit = True
                     time_val = np.append(time_val, val_time)
 
