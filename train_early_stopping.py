@@ -405,7 +405,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                     class_metrics[epoch] = maps
                     class_metrics_d[epoch] = (class_metrics[epoch] - class_metrics[epoch - 2]) / 2
                     class_metrics_d_mean[epoch] = np.mean(class_metrics_d[epoch - 4:epoch + 1], axis=0)
-                    class_converged = class_converged or np.abs(class_metrics_d_mean[epoch]) <= opt.tol_stopping
+                    class_converged = np.logical_or(class_converged, np.abs(class_metrics_d_mean[epoch]) <= opt.tol_stopping)
                     if np.all(class_converged):
                         quit = True
                     time_val = np.append(time_val, val_time)
