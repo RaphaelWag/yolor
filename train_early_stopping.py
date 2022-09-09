@@ -546,7 +546,7 @@ if __name__ == '__main__':
     parser.add_argument('--min-warmup', type=int, default=5, help='minimum epochs for warmup')
     parser.add_argument('--tol-warmup', type=float, default=1e-3,
                         help='tolerance for loss derivative to start validating')
-    parser.add_argument('--tol-stopping', type=float, default=1e-4, help='tolerance for early stopping')
+    parser.add_argument('--tol-stopping', type=float, default=2e-4, help='tolerance for early stopping')
 
     opt = parser.parse_args()
 
