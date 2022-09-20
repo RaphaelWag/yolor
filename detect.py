@@ -100,10 +100,12 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
+                    ang = 0.5 * torch.atan(ang_y / ang_x)
+                    rad = opt.v / (torch.tan(0.5 * torch.atan(rad_y / rad_x)))
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh,  conf, dst, rad_x, rad_y, ang_x, ang_y,) if opt.save_conf else \
-                            (cls, *xywh, dst, rad_x, rad_y, ang_x, ang_y)  # label format
+                        line = (cls, *xywh, conf, dst, rad, ang) if opt.save_conf else \
+                            (cls, *xywh, dst, rad, ang)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -161,6 +163,7 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--v', type=float, help='v value for radius to angle transformation')
     opt = parser.parse_args()
     print(opt)
 
