@@ -446,7 +446,7 @@ class Model(nn.Module):
             s = [1, 0.83, 0.67]  # scales
             f = [None, 3, None]  # flips (2-ud, 3-lr)
             y = []  # outputs
-            g = [1, 1/1.5, 1/2.5, 2]  # gamma augmentation
+            g = [1, 1/1.5, 1/2.5, 1/0.5, 1/0.75, 1/0.25]  # gamma augmentation
             for si, fi, gi in zip(s, f, g):
                 # xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
                 xi = x ** gi
