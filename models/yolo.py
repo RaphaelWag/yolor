@@ -446,15 +446,17 @@ class Model(nn.Module):
             s = [1, 0.83, 0.67]  # scales
             f = [None, 3, None]  # flips (2-ud, 3-lr)
             y = []  # outputs
-            for si, fi in zip(s, f):
-                xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
+            g = [1, 1.5, 2.5]  # gamma augmentation
+            for si, fi, gi in zip(s, f, g):
+                # xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
+                xi = x ** gi
                 yi = self.forward_once(xi)[0]  # forward
                 # cv2.imwrite(f'img_{si}.jpg', 255 * xi[0].cpu().numpy().transpose((1, 2, 0))[:, :, ::-1])  # save
-                yi[..., :4] /= si  # de-scale
-                if fi == 2:
-                    yi[..., 1] = img_size[0] - yi[..., 1]  # de-flip ud
-                elif fi == 3:
-                    yi[..., 0] = img_size[1] - yi[..., 0]  # de-flip lr
+                # yi[..., :4] /= si  # de-scale
+                # if fi == 2:
+                #    yi[..., 1] = img_size[0] - yi[..., 1]  # de-flip ud
+                # elif fi == 3:
+                #    yi[..., 0] = img_size[1] - yi[..., 0]  # de-flip lr
                 y.append(yi)
             return torch.cat(y, 1), None  # augmented inference, train
         else:
