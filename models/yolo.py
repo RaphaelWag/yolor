@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from models.common import SP, MP, Conv, Bottleneck, SPP, SPPCSP, VoVCSP, DWConv, Focus, BottleneckCSP, BottleneckCSPLG, \
     BottleneckCSPSE, BottleneckCSPSAM, BottleneckCSPSEA, BottleneckCSPSAMA, BottleneckCSPSAMB, BottleneckCSPGC, \
     BottleneckCSPDNL, BottleneckCSP2, BottleneckCSP2SAM, Concat, DownC, DownD, DNL, GC, SAM, SAMA, NMS, autoShape, TR, \
-    BottleneckCSPTR, BottleneckCSP2TR, SPPCSPTR, ReOrg, BottleneckCSPF, ImplicitA, ImplicitM, DWT
+    BottleneckCSPTR, BottleneckCSP2TR, SPPCSPTR, ReOrg, BottleneckCSPF, ImplicitA, ImplicitM, DWT, space_to_depth
 from models.experimental import MixConv2d, CrossConv, C3
 from utils.autoanchor import check_anchor_order
 from utils.general import make_divisible, check_file, set_logging
@@ -316,6 +316,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 args[1] = [list(range(args[1] * 2))] * len(f)
         elif m in [ReOrg, DWT]:
             c2 = ch[f] * 4
+        elif m is space_to_depth:
+            c2 = 4 * ch[f]
         else:
             c2 = ch[f if f <= -1 else f + 1]
 
