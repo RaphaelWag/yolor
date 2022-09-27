@@ -359,7 +359,7 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
     assert len(files), 'No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir)
     for fi, f in enumerate(files):
         try:
-            results = np.loadtxt(f, usecols=[2, 3, 4, 9, 10, 5, 13, 14, 15, 11, 12, 16], ndmin=2).T
+            results = np.loadtxt(f, usecols=[2, 3, 4, 11, 12, 5, 15, 16, 17, 13, 14, 18], ndmin=2).T
             n = results.shape[1]  # number of rows
             x = range(start, min(stop, n) if stop else n)
             for i in range(12):
