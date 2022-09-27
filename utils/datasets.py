@@ -965,7 +965,7 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
 def augment_gamma(img, g_gain):
     # build a lookup table mapping the pixel values [0, 255] to
     # their adjusted gamma values
-    invGamma = 1.0 / (np.random.uniform(low=0, high=1, size=1) * g_gain + 1)  # random gains
+    invGamma = 1.0 / (np.random.uniform(low=-1, high=1, size=1) * g_gain + 1)  # random gains
     table = np.array([((i / 255.0) ** invGamma) * 255
                       for i in np.arange(0, 256)]).astype("uint8")
     # apply gamma correction using the lookup table
