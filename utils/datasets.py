@@ -597,6 +597,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
             # Augment colorspace
             augment_hsv(img, hgain=hyp['hsv_h'], sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
+            img = augment_gamma(img, g_gain=hyp['g_gain'])
 
             # Apply cutouts
             # if random.random() < 0.9:
@@ -959,6 +960,14 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     # if random.random() < 0.2:
     #     for i in range(3):
     #         img[:, :, i] = cv2.equalizeHist(img[:, :, i])
+def augment_gamma(img, g_gain):
+    # build a lookup table mapping the pixel values [0, 255] to
+    # their adjusted gamma values
+    invGamma = 1.0 / g_gain
+    table = np.array([((i / 255.0) ** invGamma) * 255
+                      for i in np.arange(0, 256)]).astype("uint8")
+    # apply gamma correction using the lookup table
+    return cv2.LUT(img, table)
 
 
 def load_mosaic(self, index):
