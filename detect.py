@@ -100,8 +100,8 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
-                    ang = 0.5 * torch.atan(ang_y / ang_x)
-                    rad = opt.v / (torch.tan(0.5 * torch.atan(rad_y / rad_x)))
+                    ang = 0.5 * torch.atan2(ang_y, ang_x)
+                    rad = opt.v / (torch.tan(0.5 * torch.atan2(rad_y, rad_x)))
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf, dst, rad, ang) if opt.save_conf else \
