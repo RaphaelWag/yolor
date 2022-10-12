@@ -111,7 +111,7 @@ def detect(save_img=False):
 
                     if save_img or view_img:  # Add bbox to image
                         label = '%s %.2f' % (names[int(cls)], conf)
-                        plot_one_box(xyxy, im0, color=colors[int(cls)], line_thickness=3)
+                        plot_one_box(xyxy, im0, color=colors[int(cls)], line_thickness=1)
 
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
@@ -125,6 +125,7 @@ def detect(save_img=False):
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'images':
+                    im0 = cv2.resize(im0, (640, 640))
                     cv2.imwrite(save_path, im0)
                 else:
                     if vid_path != save_path:  # new video
