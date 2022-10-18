@@ -113,7 +113,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pbox = torch.cat((pxy, pwh), 1).to(device)  # predicted box
             iou = bbox_iou(pbox.T, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
             # lbox += (1.0 - iou).mean()  # iou loss
-            lbox = MSE_box_x(pbox.T[..., 0], tbox[i][..., 0]) + MSE_box_y(pbox.T[..., 1], tbox[i][..., 1])
+            lbox += MSE_box_x(pbox.T[..., 0], tbox[i][..., 0]) + MSE_box_y(pbox.T[..., 1], tbox[i][..., 1])
             # Objectness
             tobj[b, a, gj, gi] = (1.0 - model.gr) + model.gr * iou.detach().clamp(0).type(tobj.dtype)  # iou ratio
 
