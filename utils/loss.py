@@ -81,6 +81,8 @@ def compute_loss(p, targets, model):  # predictions, targets, model
                                                      nn.MSELoss().to(device), nn.MSELoss().to(device), \
                                                      nn.MSELoss().to(device)
 
+    MSE_box_x, MSE_box_y = nn.MSELoss().to(device), nn.MSELoss().to(device)
+
     # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
     cp, cn = smooth_BCE(eps=0.0)
 
@@ -110,8 +112,8 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pwh = torch.ones(size=pwh.shape).to(device) * h['box_size']
             pbox = torch.cat((pxy, pwh), 1).to(device)  # predicted box
             iou = bbox_iou(pbox.T, tbox[i], x1y1x2y2=False, CIoU=True)  # iou(prediction, target)
-            lbox += (1.0 - iou).mean()  # iou loss
-
+            # lbox += (1.0 - iou).mean()  # iou loss
+            lbox = MSE_box_x(pbox.T[..., 0], tbox[i][..., 0]) + MSE_box_y(pbox.T[..., 1], tbox[i][..., 1])
             # Objectness
             tobj[b, a, gj, gi] = (1.0 - model.gr) + model.gr * iou.detach().clamp(0).type(tobj.dtype)  # iou ratio
 
@@ -282,7 +284,7 @@ class SigmoidBin(nn.Module):
 
     def forward(self, pred):
         assert pred.shape[-1] == self.length, 'pred.shape[-1]=%d is not equal to self.length=%d' % (
-        pred.shape[-1], self.length)
+            pred.shape[-1], self.length)
 
         pred_reg = (pred[..., 0] * self.reg_scale - self.reg_scale / 2.0) * self.step
         pred_bin = pred[..., 1:(1 + self.bin_count)]
@@ -300,9 +302,9 @@ class SigmoidBin(nn.Module):
 
     def training_loss(self, pred, target):
         assert pred.shape[-1] == self.length, 'pred.shape[-1]=%d is not equal to self.length=%d' % (
-        pred.shape[-1], self.length)
+            pred.shape[-1], self.length)
         assert pred.shape[0] == target.shape[0], 'pred.shape=%d is not equal to the target.shape=%d' % (
-        pred.shape[0], target.shape[0])
+            pred.shape[0], target.shape[0])
         device = pred.device
 
         pred_reg = (pred[..., 0].sigmoid() * self.reg_scale - self.reg_scale / 2.0) * self.step
