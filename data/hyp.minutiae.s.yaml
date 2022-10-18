@@ -9,6 +9,7 @@ distance: 5.0 # distance regression loss gain
 radius: 2.0 # radius regression loss gain
 angle: 1.0 # angle regression loss gain
 v: 13 # v parameter for converting radius in angle
+box_size: 0.075 # size of bounding box for model prediction
 box: 0.05  # box loss gain
 cls: 0.5  # cls loss gain
 cls_pw: 1.0  # cls BCELoss positive_weight
