@@ -272,6 +272,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
+        gdip.train()
         if opt.freeze_bn_buffers:
             for k, v in model.named_modules():
                 if isinstance(v, nn.BatchNorm2d):
