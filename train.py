@@ -330,8 +330,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # Forward
             with amp.autocast(enabled=cuda):
-                imgs, gates = gdip(imgs)
-                pred = model(imgs)  # forward
+                imgs_enhanced, gates = gdip(imgs)
+                pred = model(imgs_enhanced)  # forward
                 loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
                 if rank != -1:
                     loss *= opt.world_size  # gradient averaged between devices in DDP mode
