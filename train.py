@@ -100,8 +100,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             print('freezing %s' % k)
             v.requires_grad = False
 
-    # initialize GDIP
-    gdip = GatedDIP()
 
     # Optimizer
     nbs = 64  # nominal batch size
@@ -197,9 +195,13 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
 
+    # initialize GDIP
+    gdip = GatedDIP().to(device)
+
     # DP mode
     if cuda and rank == -1 and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
+        gdip = torch.nn.DataParallel(gdip)
 
     # SyncBatchNorm
     if opt.sync_bn and cuda and rank != -1:
@@ -212,6 +214,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # DDP mode
     if cuda and rank != -1:
         model = DDP(model, device_ids=[opt.local_rank], output_device=opt.local_rank)
+        gdip = DDP(gdip, device_ids=[opt.local_rank], output_device=opt.local_rank)
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
