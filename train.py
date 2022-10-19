@@ -32,6 +32,7 @@ from utils.google_utils import attempt_download
 from utils.loss import compute_loss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first
+from models.gated_dip_modified_customEncoder import GatedDIP
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         if any(x in k for x in freeze):
             print('freezing %s' % k)
             v.requires_grad = False
+
+    # initialize GDIP
+    gdip = GatedDIP()
 
     # Optimizer
     nbs = 64  # nominal batch size
@@ -301,6 +305,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         for i, (imgs, targets, paths, _) in pbar:  # batch -------------------------------------------------------------
             ni = i + nb * epoch  # number integrated batches (since train start)
             imgs = imgs.to(device, non_blocking=True).float() / 255.0  # uint8 to float32, 0-255 to 0.0-1.0
+            imgs, gates = gdip(imgs)
 
             # Warmup
             if ni <= nw:
