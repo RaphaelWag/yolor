@@ -32,6 +32,7 @@ from utils.google_utils import attempt_download
 from utils.loss import compute_loss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first
+from models.gated_dip_modified_customEncoder import GatedDIP
 
 logger = logging.getLogger(__name__)
 
@@ -194,9 +195,13 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
 
+    # initialize GDIP
+    gdip = GatedDIP().to(device)
+
     # DP mode
     if cuda and rank == -1 and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
+        gdip = torch.nn.DataParallel(gdip)
 
     # SyncBatchNorm
     if opt.sync_bn and cuda and rank != -1:
@@ -209,6 +214,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # DDP mode
     if cuda and rank != -1:
         model = DDP(model, device_ids=[opt.local_rank], output_device=opt.local_rank)
+        gdip = DDP(gdip, device_ids=[opt.local_rank], output_device=opt.local_rank)
 
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
@@ -324,7 +330,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
             # Forward
             with amp.autocast(enabled=cuda):
-                pred = model(imgs)  # forward
+                imgs_enhanced, gates = gdip(imgs)
+                pred = model(imgs_enhanced)  # forward
                 loss, loss_items = compute_loss(pred, targets.to(device), model)  # loss scaled by batch_size
                 if rank != -1:
                     loss *= opt.world_size  # gradient averaged between devices in DDP mode
@@ -440,6 +447,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                             'best_fitness_f': best_fitness_f,
                             'training_results': f.read(),
                             'model': ema.ema,
+                            'gdip': gdip,
                             'optimizer': None if final_epoch else optimizer.state_dict(),
                             'wandb_id': wandb_run.id if wandb else None}
 
@@ -447,28 +455,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 torch.save(ckpt, last)
                 if best_fitness == fi:
                     torch.save(ckpt, best)
-                # if (best_fitness == fi) and (epoch >= (200)):
-                #    torch.save(ckpt, wdir / 'best_{:03d}.pt'.format(epoch))
-                # if best_fitness == fi:
-                #    torch.save(ckpt, wdir / 'best_overall.pt')
-                # if best_fitness_p == fi_p:
-                #    torch.save(ckpt, wdir / 'best_p.pt')
-                # if best_fitness_r == fi_r:
-                #    torch.save(ckpt, wdir / 'best_r.pt')
-                # if best_fitness_ap50 == fi_ap50:
-                #    torch.save(ckpt, wdir / 'best_ap50.pt')
-                # if best_fitness_ap == fi_ap:
-                #    torch.save(ckpt, wdir / 'best_ap.pt')
-                # if best_fitness_f == fi_f:
-                #    torch.save(ckpt, wdir / 'best_f.pt')
-                # if epoch == 0:
-                #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                # if ((epoch + 1) % opt.save_int) == 0:
-                #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                # if epoch >= (epochs - 5):
-                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                # elif epoch >= 420:
-                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
@@ -497,10 +483,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     wandb.run.finish() if wandb and wandb.run else None
     torch.cuda.empty_cache()
-    print('average epoch time train',
-          '{:1.3} +- {:1.3}'.format(np.average(time_train[5:50]), np.sqrt(np.var(time_train[5:50]))))
-    print('average epoch time val',
-          '{:1.3} +- {:1.3}'.format(np.average(time_val[5:50]), np.sqrt(np.var(time_val[5:50]))))
     return results
 
 
