@@ -13,6 +13,7 @@ from utils.general import check_img_size, non_max_suppression, apply_classifier,
     strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
+from models.gated_dip_modified_customEncoder import GatedDIP
 
 
 def detect(save_img=False):
@@ -34,7 +35,8 @@ def detect(save_img=False):
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
     if half:
         model.half()  # to FP16
-    gdip = torch.load(opt.gdip, map_location='cpu')['gdip'].to(device).eval()
+    gdip = GatedDIP()
+    gdip = gdip.load_state_dict(torch.load(opt.gdip, map_location='cpu')).eval().to(device)
 
     # Second-stage classifier
     classify = False
