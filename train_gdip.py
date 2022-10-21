@@ -450,19 +450,21 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                             'best_fitness_f': best_fitness_f,
                             'training_results': f.read(),
                             'model': ema.ema,
-                            'gdip': gdip,
                             'optimizer': None if final_epoch else optimizer.state_dict(),
                             'wandb_id': wandb_run.id if wandb else None}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
+                torch.save(gdip.state_dict(), wdir / 'gdip_last.pt')
                 if best_fitness == fi:
                     torch.save(ckpt, best)
+                    torch.save(gdip.state_dict(), wdir / 'gdip_best.pt')
                 if saving is not None:
                     for k in range(len(opt.ap_thresh)):
                         if saving[k] and not saved[k]:
                             saved[k] = True
                             torch.save(ckpt, wdir / 'thresh_{}_{}.pt'.format(opt.ap_thresh[k], epoch))
+
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
