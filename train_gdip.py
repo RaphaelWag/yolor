@@ -196,7 +196,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
 
-    gdip = GatedDIP()
+    gdip = GatedDIP().to(device)
 
     # DP mode
     if cuda and rank == -1 and torch.cuda.device_count() > 1:
@@ -272,6 +272,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 'Starting training for %g epochs...' % (imgsz, imgsz_test, dataloader.num_workers, save_dir, epochs))
     for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
         model.train()
+        gdip.train()
         if opt.freeze_bn_buffers:
             for k, v in model.named_modules():
                 if isinstance(v, nn.BatchNorm2d):
@@ -392,7 +393,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        log_imgs=opt.log_imgs if wandb else 0,
                                                                        verbose=opt.verbose,
                                                                        epoch=epoch,
-                                                                       ap_thresh=opt.ap_thresh)
+                                                                       ap_thresh=opt.ap_thresh,
+                                                                       gdip=gdip)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:

@@ -38,7 +38,8 @@ def test(data,
          plots=True,
          log_imgs=0,  # number of logged images
          epoch=0,
-         ap_thresh=None):
+         ap_thresh=None,
+         gdip=None):
     if ap_thresh is None:
         ap_thresh = []
     saving = [False for _ in range(len(ap_thresh))]
@@ -76,6 +77,8 @@ def test(data,
 
     # Configure
     model.eval()
+    if gdip is not None:
+        gdip.eval()
     is_coco = data.endswith('coco.yaml')  # is COCO dataset
     with open(data) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)  # model dict
@@ -118,7 +121,11 @@ def test(data,
         with torch.no_grad():
             # Run model
             t = time_synchronized()
-            inf_out, train_out = model(img, augment=augment)  # inference and training outputs
+            if gdip is not None:
+                img_enh, gates = gdip(img)
+                inf_out, train_out = model(img_enh, augment=augment)  # inference and training outputs
+            else:
+                inf_out, train_out = model(img, augment=augment)  # inference and training outputs
             t0 += time_synchronized() - t
 
             # Compute loss
