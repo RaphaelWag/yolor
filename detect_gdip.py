@@ -31,10 +31,10 @@ def detect(save_img=False):
 
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
-    gdip = torch.load(opt.gdip, map_location='cpu')['gdip'].to(device).eval()
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
     if half:
         model.half()  # to FP16
+    gdip = torch.load(opt.gdip, map_location='cpu')['gdip'].to(device).eval()
 
     # Second-stage classifier
     classify = False
@@ -62,7 +62,7 @@ def detect(save_img=False):
     _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
-        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img = img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
@@ -70,6 +70,7 @@ def detect(save_img=False):
         # Inference
         t1 = time_synchronized()
         img_enh, gates = gdip(img)
+        img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
         pred = model(img_enh, augment=opt.augment)[0]
 
         # Apply NMS
@@ -101,16 +102,19 @@ def detect(save_img=False):
                     s += '%g %ss, ' % (n, names[int(c)])  # add to string
 
                 # Write results
-                for *xyxy, conf, dst, cls in reversed(det):
+                for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
+                    ang = 0.5 * torch.atan2(ang_y, ang_x)
+                    rad = opt.v / (torch.tan(0.5 * torch.atan2(rad_y, rad_x)))
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf, dst) if opt.save_conf else (cls, *xywh, dst)  # label format
+                        line = (cls, *xywh, conf, dst, rad, ang) if opt.save_conf else \
+                            (cls, *xywh, dst, rad, ang)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     if save_img or view_img:  # Add bbox to image
                         label = '%s %.2f' % (names[int(cls)], conf)
-                        plot_one_box(xyxy, im0, color=colors[int(cls)], line_thickness=3)
+                        plot_one_box(xyxy, im0, color=colors[int(cls)], line_thickness=1)
 
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
@@ -124,6 +128,7 @@ def detect(save_img=False):
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'images':
+                    im0 = cv2.resize(im0, (640, 640))
                     cv2.imwrite(save_path, im0)
                 else:
                     if vid_path != save_path:  # new video
@@ -163,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--v', type=float, help='v value for radius to angle transformation')
     opt = parser.parse_args()
     print(opt)
 
