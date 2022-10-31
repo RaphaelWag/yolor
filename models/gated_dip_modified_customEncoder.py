@@ -300,10 +300,10 @@ class GatedDIP(torch.nn.Module):
         gamma_out = self.gamma_balance(x, latent_out, gate[:, 1])
         identity_out = self.identity(x, gate[:, 2])
         sharpning_out = self.sharpning(x, latent_out, gate[:, 3])
-        fog_out = self.defog(x, latent_out, gate[:, 4])
+        # fog_out = self.defog(x, latent_out, gate[:, 4])
         contrast_out = self.contrast(x, latent_out, gate[:, 5])
         tone_out = self.tone(x, latent_out, gate[:, 6])
-        x = wb_out + gamma_out + fog_out + sharpning_out + contrast_out + tone_out + identity_out
+        x = wb_out + gamma_out + sharpning_out + contrast_out + tone_out + identity_out # + fog_out
         x = (x - x.min()) / (x.max() - x.min())
         return x, gate
 

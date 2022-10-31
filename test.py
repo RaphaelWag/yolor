@@ -107,7 +107,6 @@ def test(data,
     val0 = time.time()
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
         img = img.to(device, non_blocking=True)
-        img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         targets = targets.to(device)
         nb, _, height, width = img.shape  # batch size, channels, height, width
@@ -118,10 +117,13 @@ def test(data,
             # Run model
             t = time_synchronized()
             if gdip is not None:
-                enh_img, gates = gdip(img)
-                inf_out, train_out = model(enh_img, augment=augment)  # inference and training outputs
+                img_enh, gates = gdip(img)
+                img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
+                inf_out, train_out = model(img_enh, augment=augment)  # inference and training outputs
             else:
+                img = img.half() if half else img.float()  # uint8 to fp16/32
                 inf_out, train_out = model(img, augment=augment)  # inference and training outputs
+
             t0 += time_synchronized() - t
 
             # Compute loss

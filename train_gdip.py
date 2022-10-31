@@ -100,7 +100,6 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             print('freezing %s' % k)
             v.requires_grad = False
 
-
     # Optimizer
     nbs = 64  # nominal batch size
     accumulate = max(round(nbs / total_batch_size), 1)  # accumulate loss before optimizing
@@ -383,16 +382,17 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
                     results, maps, times, val_time = test.test(opt.data,
-                                                                       batch_size=batch_size * 2,
-                                                                       imgsz=imgsz_test,
-                                                                       model=ema.ema,
-                                                                       single_cls=opt.single_cls,
-                                                                       dataloader=testloader,
-                                                                       save_dir=save_dir,
-                                                                       plots=plots and final_epoch,
-                                                                       log_imgs=opt.log_imgs if wandb else 0,
-                                                                       verbose=opt.verbose,
-                                                                       epoch=epoch)
+                                                               batch_size=batch_size * 2,
+                                                               imgsz=imgsz_test,
+                                                               model=ema.ema,
+                                                               single_cls=opt.single_cls,
+                                                               dataloader=testloader,
+                                                               save_dir=save_dir,
+                                                               plots=plots and final_epoch,
+                                                               log_imgs=opt.log_imgs if wandb else 0,
+                                                               verbose=opt.verbose,
+                                                               epoch=epoch,
+                                                               gdip=gdip)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
@@ -448,14 +448,15 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                             'best_fitness_f': best_fitness_f,
                             'training_results': f.read(),
                             'model': ema.ema,
-                            'gdip': gdip,
                             'optimizer': None if final_epoch else optimizer.state_dict(),
                             'wandb_id': wandb_run.id if wandb else None}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
+                torch.save(gdip.state_dict(), wdir / 'last_gdip.pt')
                 if best_fitness == fi:
                     torch.save(ckpt, best)
+                    torch.save(gdip.state_dict(), wdir / 'best_gdip.pt')
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
