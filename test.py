@@ -106,6 +106,7 @@ def test(data,
     jdict, stats, ap, ap_class, wandb_images = [], [], [], [], []
     val0 = time.time()
     for batch_i, (img, targets, paths, shapes) in enumerate(tqdm(dataloader, desc=s)):
+        img = img.float()
         img = img.to(device, non_blocking=True)
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         targets = targets.to(device)
