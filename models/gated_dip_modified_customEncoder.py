@@ -297,14 +297,15 @@ class GatedDIP(torch.nn.Module):
         latent_out = self.encoder(x)
         gate = self.tanh_range(self.gate_module(latent_out), 0.01, 1.0)
 
-        wb_out = self.white_balance(x, latent_out, gate[:, 0])
+        # wb_out = self.white_balance(x, latent_out, gate[:, 0])
         gamma_out = self.gamma_balance(x, latent_out, gate[:, 1])
         identity_out = self.identity(x, gate[:, 2])
-        sharpning_out = self.sharpning(x, latent_out, gate[:, 3])
+        # sharpning_out = self.sharpning(x, latent_out, gate[:, 3])
         # fog_out = self.defog(x, latent_out, gate[:, 4])
-        contrast_out = self.contrast(x, latent_out, gate[:, 5])
-        tone_out = self.tone(x, latent_out, gate[:, 6])
-        x = wb_out + gamma_out + sharpning_out + contrast_out + tone_out + identity_out  #+ fog_out
+        # contrast_out = self.contrast(x, latent_out, gate[:, 5])
+        # tone_out = self.tone(x, latent_out, gate[:, 6])
+        #x = wb_out + gamma_out + sharpning_out + contrast_out + tone_out + identity_out  #+ fog_out
+        x = gamma_out + identity_out
         x = (x - x.min()) / (x.max() - x.min())
         return x, gate
 
