@@ -36,7 +36,7 @@ def detect(save_img=False):
     if half:
         model.half()  # to FP16
     gdip = GatedDIP()
-    gdip = gdip.load_state_dict(torch.load(opt.gdip, map_location='cpu')).eval().to(device)
+    gdip = gdip.load_state_dict(torch.load(opt.gdip[0], map_location='cpu')).eval().to(device)
 
     # Second-stage classifier
     classify = False
