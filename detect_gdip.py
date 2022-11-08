@@ -77,7 +77,9 @@ def detect(save_img=False):
         img_enh, gates = gdip(img)
         img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
         pred = model(img_enh, augment=opt.augment)[0]
-        cv2.imwrite(save_dir / 'enh' / Path(path).name, np.array(img_enh.cpu().numpy() * 255).astype('uint8'))
+        img_enh = np.array(img_enh.cpu().numpy() * 255).astype('uint8')
+        p = Path(path)
+        cv2.imwrite(save_dir / 'enh' / p.name, img_enh)
         # Apply NMS
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t2 = time_synchronized()
