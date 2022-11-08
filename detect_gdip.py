@@ -78,6 +78,7 @@ def detect(save_img=False):
         img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
         pred = model(img_enh, augment=opt.augment)[0]
         img_enh = np.array(img_enh.cpu().numpy()[0] * 255).astype('uint8')
+        img_enh = np.moveaxis(img_enh, -1, 0)
         p = Path(path)
         ps = str(save_dir / 'enh' / p.name)
         (save_dir / 'enh').mkdir(parents=True, exist_ok=True)
