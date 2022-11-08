@@ -62,7 +62,7 @@ def detect(save_img=False):
     _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
-        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img = img.float()
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
@@ -70,6 +70,7 @@ def detect(save_img=False):
         # Inference
         t1 = time_synchronized()
         img_enh, gates = gdip(img)
+        img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
         pred = model(img_enh, augment=opt.augment)[0]
 
         # Apply NMS
