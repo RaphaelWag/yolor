@@ -80,7 +80,7 @@ def detect(save_img=False):
         img_enh = np.array(img_enh.cpu().numpy() * 255).astype('uint8')
         p = Path(path)
         ps = str(save_dir / 'enh' / p.name)
-        (save_dir / 'enh' / p.name).mkdir(parents=True, exist_ok=True)
+        (save_dir / 'enh').mkdir(parents=True, exist_ok=True)
         cv2.imwrite(ps, img_enh)
         # Apply NMS
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
