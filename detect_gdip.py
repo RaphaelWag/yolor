@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
+import numpy as np
 from numpy import random
 
 from models.experimental import attempt_load
@@ -75,6 +76,7 @@ def detect(save_img=False):
         t1 = time_synchronized()
         img_enh, gates = gdip(img)
         img_enh = img_enh.half() if half else img_enh.float()  # uint8 to fp16/32
+        cv2.imwrite(save_dir/ 'enh' / Path(path).name, np.array(img_enh * 255).astype('uint8'))
         pred = model(img_enh, augment=opt.augment)[0]
 
         # Apply NMS
