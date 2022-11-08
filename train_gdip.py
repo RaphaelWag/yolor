@@ -105,6 +105,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     accumulate = max(round(nbs / total_batch_size), 1)  # accumulate loss before optimizing
     hyp['weight_decay'] *= total_batch_size * accumulate / nbs  # scale weight_decay
 
+    # initialize GDIP
+    gdip = GatedDIP().to(device)
+
     pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
     for k, v in model.named_modules():
         if hasattr(v, 'bias') and isinstance(v.bias, nn.Parameter):
@@ -143,6 +146,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
 
     optimizer.add_param_group({'params': pg1, 'weight_decay': hyp['weight_decay']})  # add pg1 with weight_decay
     optimizer.add_param_group({'params': pg2})  # add pg2 (biases)
+    optimizer.add_param_group({'params': list(gdip.parameters()), 'weight_decay': hyp['weight_decay']})
     logger.info('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
     del pg0, pg1, pg2
 
@@ -194,8 +198,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
 
-    # initialize GDIP
-    gdip = GatedDIP().to(device)
+
 
     # DP mode
     if cuda and rank == -1 and torch.cuda.device_count() > 1:
