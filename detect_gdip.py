@@ -79,6 +79,7 @@ def detect(save_img=False):
         pred = model(img_enh, augment=opt.augment)[0]
         img_enh = np.array(img_enh.cpu().numpy()[0] * 255).astype('uint8')
         img_enh = np.einsum('ijk->jki',img_enh)
+        img_enh = cv2.cvtColor(img_enh, cv2.COLOR_RGB2BGR)
         p = Path(path)
         ps = str(save_dir / 'enh' / p.name)
         (save_dir / 'enh').mkdir(parents=True, exist_ok=True)
