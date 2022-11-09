@@ -385,7 +385,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        plots=plots and final_epoch,
                                                                        log_imgs=opt.log_imgs if wandb else 0,
                                                                        verbose=opt.verbose,
-                                                                       epoch=epoch)
+                                                                       epoch=epoch,
+                                                                       box_size=box_size)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
