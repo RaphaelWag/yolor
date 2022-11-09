@@ -43,8 +43,7 @@ except ImportError:
 
 
 def train(hyp, opt, device, tb_writer=None, wandb=None):
-    saved = [False for _ in range(len(opt.ap_thresh))]
-    saving = None
+
     logger.info(f'Hyperparameters {hyp}')
     save_dir, epochs, batch_size, total_batch_size, weights, rank = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weights, opt.global_rank
@@ -375,7 +374,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
             final_epoch = epoch + 1 == epochs
             if not opt.notest or final_epoch:  # Calculate mAP
                 if epoch >= 3:
-                    results, maps, times, val_time, saving = test.test(opt.data,
+                    results, maps, times, val_time = test.test(opt.data,
                                                                        batch_size=batch_size * 2,
                                                                        imgsz=imgsz_test,
                                                                        model=ema.ema,
@@ -385,8 +384,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                                                                        plots=plots and final_epoch,
                                                                        log_imgs=opt.log_imgs if wandb else 0,
                                                                        verbose=opt.verbose,
-                                                                       epoch=epoch,
-                                                                       ap_thresh=opt.ap_thresh)
+                                                                       epoch=epoch)
                     time_val = np.append(time_val, val_time)
             # Write
             with open(results_file, 'a') as f:
@@ -449,33 +447,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
                 torch.save(ckpt, last)
                 if best_fitness == fi:
                     torch.save(ckpt, best)
-                # if (best_fitness == fi) and (epoch >= (200)):
-                #    torch.save(ckpt, wdir / 'best_{:03d}.pt'.format(epoch))
-                # if best_fitness == fi:
-                #    torch.save(ckpt, wdir / 'best_overall.pt')
-                # if best_fitness_p == fi_p:
-                #    torch.save(ckpt, wdir / 'best_p.pt')
-                # if best_fitness_r == fi_r:
-                #    torch.save(ckpt, wdir / 'best_r.pt')
-                # if best_fitness_ap50 == fi_ap50:
-                #    torch.save(ckpt, wdir / 'best_ap50.pt')
-                # if best_fitness_ap == fi_ap:
-                #    torch.save(ckpt, wdir / 'best_ap.pt')
-                # if best_fitness_f == fi_f:
-                #    torch.save(ckpt, wdir / 'best_f.pt')
-                # if epoch == 0:
-                #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                # if ((epoch + 1) % opt.save_int) == 0:
-                #    torch.save(ckpt, wdir / 'epoch_{:03d}.pt'.format(epoch))
-                # if epoch >= (epochs - 5):
-                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                # elif epoch >= 420:
-                #    torch.save(ckpt, wdir / 'last_{:03d}.pt'.format(epoch))
-                if saving is not None:
-                    for k in range(len(opt.ap_thresh)):
-                        if saving[k] and not saved[k]:
-                            saved[k] = True
-                            torch.save(ckpt, wdir / 'thresh_{}_{}.pt'.format(opt.ap_thresh[k], epoch))
+
                 del ckpt
         # end epoch ----------------------------------------------------------------------------------------------------
     # end training
@@ -546,11 +518,7 @@ if __name__ == '__main__':
     parser.add_argument('--freeze-bn', action='store_true', help='freeze batch norm layers')
     parser.add_argument('--freeze-bn-buffers', action='store_true', help='freeze running mean and var')
     parser.add_argument('--verbose', action='store_true', help='saving validation metrics per class each epoch')
-    parser.add_argument('--ap_thresh', type=str,
-                        default='[0.75, 0.775, 0.80, 0.825, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90]',
-                        help='ap threshold for saving')
     opt = parser.parse_args()
-    opt.ap_thresh = eval(opt.ap_thresh)
 
     # Set DDP variables
     opt.total_batch_size = opt.batch_size
