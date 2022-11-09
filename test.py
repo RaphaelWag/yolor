@@ -38,7 +38,8 @@ def test(data,
          plots=True,
          log_imgs=0,  # number of logged images
          epoch=0,
-         gdip=None):
+         gdip=None,
+         box_size=None):
 
     # Initialize/load model and set device
     training = model is not None
@@ -132,7 +133,7 @@ def test(data,
 
             # Run NMS
             t = time_synchronized()
-            output = non_max_suppression(inf_out, conf_thres=conf_thres, iou_thres=iou_thres)
+            output = non_max_suppression(inf_out, conf_thres=conf_thres, iou_thres=iou_thres, box_size=box_size)
             t1 += time_synchronized() - t
 
         # Statistics per image

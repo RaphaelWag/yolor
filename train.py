@@ -193,6 +193,7 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # Image sizes
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz, imgsz_test = [check_img_size(x, gs) for x in opt.img_size]  # verify imgsz are gs-multiples
+    box_size = imgsz_test * hyp['box_size']
 
     # DP mode
     if cuda and rank == -1 and torch.cuda.device_count() > 1:

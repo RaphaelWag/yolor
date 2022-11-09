@@ -18,7 +18,7 @@ import torch
 import yaml
 
 from utils.google_utils import gsutil_getsize
-from utils.metrics import fitness, fitness_p, fitness_r, fitness_ap50, fitness_ap, fitness_f   
+from utils.metrics import fitness, fitness_p, fitness_r, fitness_ap50, fitness_ap, fitness_f
 from utils.torch_utils import init_torch_seeds
 
 # Set printoptions
@@ -262,7 +262,8 @@ def wh_iou(wh1, wh2):
     return inter / (wh1.prod(2) + wh2.prod(2) - inter)  # iou = inter / (area1 + area2 - inter)
 
 
-def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, classes=None, agnostic=False):
+def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, classes=None, agnostic=False,
+                        box_size=None):
     """Performs Non-Maximum Suppression (NMS) on inference results
 
     Returns:
@@ -294,6 +295,8 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         x[:, 10:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
 
         # Box (center x, center y, width, height) to (x1, y1, x2, y2)
+        if box_size is not None:
+            x[:, 2:4] = box_size
         box = xywh2xyxy(x[:, :4])
 
         # Detections matrix nx6 (xyxy, conf, cls)

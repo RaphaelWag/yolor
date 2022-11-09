@@ -107,6 +107,7 @@ class IDetect(nn.Module):
         self.m = nn.ModuleList(nn.Conv2d(x, self.no * self.na, 1) for x in ch)  # output conv
         self.ia = nn.ModuleList(ImplicitA(x) for x in ch)
         self.im = nn.ModuleList(ImplicitM(self.no * self.na) for _ in ch)
+        self.box_size = 48
 
     def forward(self, x):
         # x = x.copy()  # for profiling
@@ -123,7 +124,7 @@ class IDetect(nn.Module):
 
                 y = x[i].sigmoid()
                 y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
-                y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
+                y[..., 2:4] = self.box_size # (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
                 y[..., 5] -= 0.5
                 y[..., 6] = (y[..., 6] - 0.5) * 4
                 y[..., 7] = (y[..., 7] - 0.5) * 4
