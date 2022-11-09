@@ -366,7 +366,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
-        self.box_size = img_size * hyp['box_size']
+        self.box_size = hyp['box_size']
 
         def img2label_paths(img_paths):
             # Define label paths as a function of image paths
