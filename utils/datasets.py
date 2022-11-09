@@ -596,6 +596,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
             # Augment colorspace
             augment_hsv(img, hgain=hyp['hsv_h'], sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
+            img = augment_gamma(img, g_gain=hyp['g_gain'])
 
             # Apply cutouts
             # if random.random() < 0.9:
@@ -879,7 +880,6 @@ class LoadImagesAndLabels9(Dataset):  # for training/testing
 
             # Augment colorspace
             augment_hsv(img, hgain=hyp['hsv_h'], sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
-            img = augment_gamma(img, g_gain=hyp['g_gain'])
 
             # Apply cutouts
             # if random.random() < 0.9:
