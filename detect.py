@@ -110,12 +110,10 @@ def detect(save_img=False):
                     r_12 = torch.sqrt((1 + rad_x) / (1 - rad_x + eps))
                     r_3 = (1 / (eps + rad_y) + torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
                     r_4 = (1 / (eps + rad_y) - torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
-                    if torch.isclose(r_12, torch.abs(r_3)):
-                        rad = v * r_3
-                    elif torch.isclose(r_12, torch.abs(r_4)):
-                        rad = v * r_4
-                    else:
-                        rad = None
+                    d_13 = torch.abs(r_12 - torch.abs(r_3))
+                    d_14 = torch.abs(r_12 - torch.abs(r_4))
+                    rad = v * r_3 if d_13 < d_14 else v * r_4
+
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf, dst, rad, ang) if opt.save_conf else \
