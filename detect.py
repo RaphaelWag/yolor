@@ -103,14 +103,17 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
+                    rad_x, rad_y = rad_x.cpu().float(), rad_y.cpu().float()
                     ang = 0.5 * torch.atan2(ang_y, ang_x)
-                    r_12 = v * torch.sqrt((1 + rad_x) / (1 - rad_x + eps))
-                    r_3 = v * (1 / (eps + rad_y) + torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
-                    r_4 = v * (1 / (eps + rad_y) - torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
+                    norm = torch.sqrt(rad_x ** 2 + rad_y ** 2)
+                    rad_x, rad_y = rad_x / norm, rad_y / norm
+                    r_12 = torch.sqrt((1 + rad_x) / (1 - rad_x + eps))
+                    r_3 = (1 / (eps + rad_y) + torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
+                    r_4 = (1 / (eps + rad_y) - torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
                     if torch.isclose(r_12, torch.abs(r_3)):
-                        rad = r_3
+                        rad = v * r_3
                     elif torch.isclose(r_12, torch.abs(r_4)):
-                        rad = r_4
+                        rad = v * r_4
                     else:
                         rad = None
                     if save_txt:  # Write to file
@@ -176,7 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--v', type=float, help='v value for radius to angle transformation')
-    parser.add_argument('--eps', type=float, default=1 - 16, help='epsilon value to avoid dividing by zero')
+    parser.add_argument('--eps', type=float, default=1e-16, help='epsilon value to avoid dividing by zero')
     parser.add_argument('--box-size', type=float, default=0.075, help='box size for detections')
     opt = parser.parse_args()
     print(opt)
