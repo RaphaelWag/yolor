@@ -18,6 +18,7 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized
 def detect(save_img=False):
     source, weights, view_img, save_txt, imgsz = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
     v, eps = opt.v, opt.eps
+    box_size = opt.box_size * imgsz
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://'))
 
@@ -72,7 +73,8 @@ def detect(save_img=False):
         pred = model(img, augment=opt.augment)[0]
 
         # Apply NMS
-        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
+        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms,
+                                   box_size=box_size)
         t2 = time_synchronized()
 
         # Apply Classifier
@@ -102,9 +104,9 @@ def detect(save_img=False):
                 # Write results
                 for *xyxy, conf, dst, rad_x, rad_y, ang_x, ang_y, cls in reversed(det):
                     ang = 0.5 * torch.atan2(ang_y, ang_x)
-                    r_12 = v*torch.sqrt((1+rad_x)/(1-rad_x+eps))
-                    r_3 = v*(1/(eps+rad_y)+torch.sqrt((1/(eps+torch.square(rad_y)))-1))
-                    r_4 = v*(1/(eps+rad_y)-torch.sqrt((1/(eps+torch.square(rad_y)))-1))
+                    r_12 = v * torch.sqrt((1 + rad_x) / (1 - rad_x + eps))
+                    r_3 = v * (1 / (eps + rad_y) + torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
+                    r_4 = v * (1 / (eps + rad_y) - torch.sqrt((1 / (eps + torch.square(rad_y))) - 1))
                     if torch.isclose(r_12, torch.abs(r_3)):
                         rad = r_3
                     elif torch.isclose(r_12, torch.abs(r_4)):
@@ -174,7 +176,8 @@ if __name__ == '__main__':
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--v', type=float, help='v value for radius to angle transformation')
-    parser.add_argument('--eps', type=float, default=1-16, help='epsilon value to avoid dividing by zero')
+    parser.add_argument('--eps', type=float, default=1 - 16, help='epsilon value to avoid dividing by zero')
+    parser.add_argument('--box-size', type=float, default=0.075, help='box size for detections')
     opt = parser.parse_args()
     print(opt)
 
