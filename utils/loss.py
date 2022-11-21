@@ -175,7 +175,7 @@ def build_targets(p, targets, model):
     gain = torch.ones(12, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
-    m = model.hyp['m']
+    m_rad = torch.tensor(model.hyp['m'])
 
     g = 0.5  # bias
     off = torch.tensor([[0, 0],
@@ -228,7 +228,7 @@ def build_targets(p, targets, model):
         tang_y.append(torch.sin(gamma_2) / 4 + 0.5)
 
         # calculate radius transformation
-        trad.append(1. / (m + t[:, 7]))
+        trad.append(1./m_rad + t[:, 7])
 
     return tcls, tbox, indices, anch, tdst, trad, tang_x, tang_y
 
