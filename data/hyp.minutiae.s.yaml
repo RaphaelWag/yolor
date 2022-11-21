@@ -8,7 +8,7 @@ warmup_bias_lr: 0.1  # warmup initial bias lr
 distance: 1.0 # distance regression loss gain
 radius: 1.0 # radius regression loss gain
 angle: 1.0 # angle regression loss gain
-v: 7 # v parameter for converting radius in angle
+m: 7 # v parameter for converting radius
 box_size: 0.075 # size of bounding box for model prediction
 box: 0.05  # box loss gain
 cls: 0.5  # cls loss gain

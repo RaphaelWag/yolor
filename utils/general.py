@@ -306,11 +306,10 @@ def non_max_suppression(prediction, conf_thres=0.1, iou_thres=0.6, merge=False, 
         else:  # best class only
             conf, j = x[:, 10:].max(1, keepdim=True)
             dst = x[:, 5:6]
-            rad_x = x[:, 6:7]
-            rad_y = x[:, 7:8]
+            rad = x[:, 6:7]
             ang_x = x[:, 8:9]
             ang_y = x[:, 9:10]
-            x = torch.cat((box, conf, dst, rad_x, rad_y, ang_x, ang_y, j.float()), 1)[conf.view(-1) > conf_thres]
+            x = torch.cat((box, conf, dst, rad, ang_x, ang_y, j.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class
         if classes:

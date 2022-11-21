@@ -63,23 +63,22 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     # TODO normalize coordinates
     device = targets.device
     # print(device)
-    lcls, lbox, lobj, ldst, lrad_x, lrad_y, lang_x, lang_y = torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device), \
-                                                             torch.zeros(1, device=device)
-    tcls, tbox, indices, anchors, tdst, trad_x, trad_y, tang_x, tang_y = build_targets(p, targets, model)  # targets
+    lcls, lbox, lobj, ldst, lrad, lang_x, lang_y = torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+                                                        torch.zeros(1, device=device), \
+
+    tcls, tbox, indices, anchors, tdst, trad, tang_x, tang_y = build_targets(p, targets, model)  # targets
     h = model.hyp  # hyperparameters
 
     # Define criteria
     BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['cls_pw']])).to(device)
     BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([h['obj_pw']])).to(device)
-    MSEdst, MSErad_x, MSErad_y, MSEang_x, MSEang_y = nn.MSELoss().to(device), nn.MSELoss().to(device), \
-                                                     nn.MSELoss().to(device), nn.MSELoss().to(device), \
-                                                     nn.MSELoss().to(device)
+    MSEdst, MSErad, MSEang_x, MSEang_y = nn.MSELoss().to(device), nn.MSELoss().to(device), \
+                                                     nn.MSELoss().to(device), nn.MSELoss().to(device)
 
     MSE_box_x, MSE_box_y = nn.MSELoss().to(device), nn.MSELoss().to(device)
 
@@ -130,21 +129,18 @@ def compute_loss(p, targets, model):  # predictions, targets, model
 
             # Single Regression
             pdst = ps[..., 5].sigmoid()
-            prad_x = ps[..., 6].sigmoid()
-            prad_y = ps[..., 7].sigmoid()
+            prad = ps[..., 6].sigmoid()
             pang_x = ps[..., 8].sigmoid()
             pang_y = ps[..., 9].sigmoid()
             if model.training:
                 ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
-                lrad_x += MSErad_x(prad_x, trad_x[i])
-                lrad_y += MSErad_y(prad_y, trad_y[i])
+                lrad += MSErad(prad, trad[i])
                 lang_x += MSEang_x(pang_x, tang_x[i])
                 lang_y += MSEang_y(pang_y, tang_y[i])
 
             else:
                 ldst += MSEdst(pdst, tdst[i])
-                lrad_x += MSErad_x(prad_x, trad_x[i])
-                lrad_y += MSErad_y(prad_y, trad_y[i])
+                lrad += MSErad(prad, trad[i])
                 lang_x += MSEang_x(pang_x, tang_x[i])
                 lang_y += MSEang_y(pang_y, tang_y[i])
 
@@ -156,34 +152,30 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     lcls *= h['cls'] * s
     if model.training:
         ldst *= h['distance'] * s
-        lrad_x *= h['radius'] * s
-        lrad_y *= h['radius'] * s
+        lrad *= h['radius'] * s
         lang_x *= h['angle'] * s
         lang_y *= h['angle'] * s
     else:
         ldst *= s
-        lrad_x *= s
-        lrad_y *= s
+        lrad *= s
         lang_x *= s
         lang_y *= s
 
     bs = tobj.shape[0]  # batch size
-    loss = lbox + lobj + lcls + ldst + lrad_x + lrad_y + lang_x + lang_y
-    g_rad = lrad_x + lrad_y
+    loss = lbox + lobj + lcls + ldst + lrad + lang_x + lang_y
     g_ang = lang_x + lang_y
-    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, g_rad, g_ang, loss)).detach()
+    return loss * bs, torch.cat((lbox, lobj, lcls, ldst, lrad, g_ang, loss)).detach()
 
 
 def build_targets(p, targets, model):
     # Build targets for compute_loss(), input targets(image,class,x,y,w,h,dst)
     det = model.module.model[-1] if is_parallel(model) else model.model[-1]  # Detect() module
     na, nt = det.na, targets.shape[0]  # number of anchors, targets
-    tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y = [], [], [], [], [], [], [], [], []
+    tcls, tbox, indices, anch, tdst, trad, tang_x, tang_y = [], [], [], [], [], [], [], []
     gain = torch.ones(12, device=targets.device)  # normalized to gridspace gain
     ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
     targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
-    v = model.hyp['v']
-    v_sq = v ** 2
+    m = model.hyp['m']
 
     g = 0.5  # bias
     off = torch.tensor([[0, 0],
@@ -235,14 +227,10 @@ def build_targets(p, targets, model):
         tang_x.append(torch.cos(gamma_2) / 4 + 0.5)
         tang_y.append(torch.sin(gamma_2) / 4 + 0.5)
 
-        # calculate radius coordinates on unit sphere
-        radius_sign = torch.sign(t[:, 8] + 1e-6 - 180)
-        r = t[:, 7] * radius_sign
-        alpha_2 = torch.arccos(r / torch.sqrt(r ** 2 + v_sq)) * 2
-        trad_x.append(torch.cos(alpha_2) / 4 + 0.5)
-        trad_y.append(torch.sin(alpha_2) / 4 + 0.5)
+        # calculate radius transformation
+        trad.append(1. / (m + t[:, 7]))
 
-    return tcls, tbox, indices, anch, tdst, trad_x, trad_y, tang_x, tang_y
+    return tcls, tbox, indices, anch, tdst, trad, tang_x, tang_y
 
 
 class SigmoidBin(nn.Module):
