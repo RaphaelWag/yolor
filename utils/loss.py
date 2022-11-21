@@ -228,7 +228,7 @@ def build_targets(p, targets, model):
         tang_y.append(torch.sin(gamma_2) / 4 + 0.5)
 
         # calculate radius transformation
-        trad.append(1./m_rad + t[:, 7])
+        trad.append(1./(m_rad + t[:, 7]))
 
     return tcls, tbox, indices, anch, tdst, trad, tang_x, tang_y
 
