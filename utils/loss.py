@@ -135,7 +135,7 @@ def compute_loss(p, targets, model):  # predictions, targets, model
             pang_x = ps[..., 8].sigmoid()
             pang_y = ps[..., 9].sigmoid()
             if model.training:
-                ldst += MSEdst(pdst, tdst[i])  # we can replace this loss function with rmse or anything we like
+                ldst += MSEdst(pdst/tdst[i], tdst[i]/tdst[i])  # we can replace this loss function with rmse or anything we like
                 lrad_x += MSErad_x(prad_x, trad_x[i])
                 lrad_y += MSErad_y(prad_y, trad_y[i])
                 lang_x += MSEang_x(pang_x, tang_x[i])
